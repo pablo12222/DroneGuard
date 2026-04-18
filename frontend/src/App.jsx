@@ -395,6 +395,33 @@ export default function App() {
     }
   }, [activeDrone, activeDroneId, updateDrone, animateReturn]);
 
+  const handleRestart = useCallback(async () => {
+    if (!activeDrone) return;
+    const { instanceId, simulationPreset, routeData, droneId, videoPath } = activeDrone;
+    updateDrone(instanceId, { status: 'starting', progress: 0, detections: [], simulationTime: 0, anomalyCount: 0, logs: [] });
+    try {
+      const body = {
+        name: `${simulationPreset?.name || 'Custom'} — ${new Date().toLocaleTimeString()}`,
+        droneId,
+        videoPath: videoPath || undefined,
+      };
+      if (simulationPreset?.id === 'custom') {
+        body.routeData = routeData;
+      } else {
+        body.routeId = simulationPreset.routeId;
+      }
+      const data = await api.post('/api/inspection/start', body);
+      updateDrone(instanceId, { missionId: data.missionId, status: 'running', weather: data.weather || null });
+      connectDroneSSE(data.missionId, instanceId);
+    } catch (err) {
+      updateDrone(instanceId, d => ({
+        ...d,
+        status: 'error',
+        logs: [...d.logs, { id: Date.now(), level: 'error', message: `Restart failed: ${err.message}`, timestamp: 0 }],
+      }));
+    }
+  }, [activeDrone, updateDrone, connectDroneSSE]);
+
   const handleAddWaypoint = useCallback((lat, lng) => {
     setCustomWaypoints(prev => [...prev, { lat, lng }]);
   }, []);
@@ -469,6 +496,7 @@ export default function App() {
           onRemoveDrone={handleRemoveDrone}
           onPause={handlePause}
           onReset={handleReset}
+          onRestart={handleRestart}
           onViewChange={setActiveView}
           onTogglePlanningMode={handleTogglePlanningMode}
           onAddDroneWithRoute={handleAddDroneWithRoute}

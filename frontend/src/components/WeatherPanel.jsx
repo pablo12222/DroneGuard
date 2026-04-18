@@ -17,7 +17,7 @@
         <div className="flex items-center gap-1.5 text-black/60">
           <Wind size={12} className="text-blue-400" />
           <span className="text-black">{weather.windSpeed?.toFixed(1)} m/s</span>
-          <span className="text-black/30">{windDir(weather.windDirection)}</span>
+          <span className="text-black">{windDir(weather.windDirection)}</span>
         </div>
         <div className="flex items-center gap-1.5 text-black/60">
           <Droplets size={12} className="text-cyan-400" />
