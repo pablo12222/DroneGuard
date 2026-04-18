@@ -112,11 +112,17 @@ export default function App() {
     });
   }, []);
 
-  const handleYoloDetection = useCallback((instanceId, dets, ts) => {
+  const handleYoloDetection = useCallback((instanceId, dets, ts, stats = {}) => {
     const now = Date.now();
 
     updateDrone(instanceId, d => {
       const nextLogs = [...d.logs];
+      const nextAiLiveDetections = dets.map(det => ({
+        ...det,
+        timestamp: typeof ts === 'number' ? ts : det.timestamp,
+      }));
+      const nextAiTotalDetections = stats.totalDetections ?? d.aiTotalDetections ?? 0;
+      const nextAiTotalAnomalies = stats.totalAnomalies ?? d.aiTotalAnomalies ?? 0;
 
       dets.forEach(det => {
         const key = [
@@ -134,14 +140,26 @@ export default function App() {
         yoloLogCooldownRef.current.set(key, now);
         nextLogs.push({
           id: Date.now() + Math.random(),
-          level: det.isAnomaly ? 'warning' : 'info',
+          level: det.isAnomaly ? 'error' : 'info',
           message: `YOLO: ${det.className} â€" ${(det.confidence * 100).toFixed(0)}% conf Â· ${det.severity} severity`,
           timestamp: parseFloat(ts.toFixed(1)),
         });
       });
 
+      if (nextAiTotalAnomalies > (d.aiTotalAnomalies || 0)) {
+        nextLogs.push({
+          id: Date.now() + Math.random(),
+          level: 'error',
+          message: `YOLO anomaly confirmed • total ${nextAiTotalAnomalies}`,
+          timestamp: parseFloat(ts.toFixed(1)),
+        });
+      }
+
       return {
         ...d,
+        aiLiveDetections: nextAiLiveDetections,
+        aiTotalDetections: nextAiTotalDetections,
+        aiTotalAnomalies: nextAiTotalAnomalies,
         logs: nextLogs.slice(-200),
       };
     });
@@ -152,6 +170,7 @@ export default function App() {
         if (timestamp < cutoff) yoloLogCooldownRef.current.delete(key);
       }
     }
+
   }, [updateDrone]);
 
   handleSSEEventRef.current = (instanceId, event) => {
@@ -212,7 +231,12 @@ export default function App() {
       case 'inspection_reset':
         updateDrone(instanceId, {
           status: 'idle', progress: 0, dronePosition: null,
-          detections: [], simulationTime: 0, anomalyCount: 0,
+          detections: [],
+          aiLiveDetections: [],
+          aiTotalDetections: 0,
+          aiTotalAnomalies: 0,
+          simulationTime: 0,
+          anomalyCount: 0,
         });
         break;
       case 'inspection_status':
@@ -267,6 +291,9 @@ export default function App() {
       progress: 0,
       anomalyCount: 0,
       detections: [],
+      aiLiveDetections: [],
+      aiTotalDetections: 0,
+      aiTotalAnomalies: 0,
       logs: [],
       dronePosition: null,
       simulationTime: 0,
@@ -385,7 +412,13 @@ export default function App() {
       await api.post('/api/inspection/reset', { missionId: activeDrone.missionId });
       updateDrone(instanceId, {
         status: 'idle', progress: 0, dronePosition: null,
-        detections: [], simulationTime: 0, anomalyCount: 0, logs: [],
+        detections: [],
+        aiLiveDetections: [],
+        aiTotalDetections: 0,
+        aiTotalAnomalies: 0,
+        simulationTime: 0,
+        anomalyCount: 0,
+        logs: [],
       });
     } catch (err) {
       updateDrone(instanceId, d => ({
@@ -398,7 +431,17 @@ export default function App() {
   const handleRestart = useCallback(async () => {
     if (!activeDrone) return;
     const { instanceId, simulationPreset, routeData, droneId, videoPath } = activeDrone;
-    updateDrone(instanceId, { status: 'starting', progress: 0, detections: [], simulationTime: 0, anomalyCount: 0, logs: [] });
+    updateDrone(instanceId, {
+      status: 'starting',
+      progress: 0,
+      detections: [],
+      aiLiveDetections: [],
+      aiTotalDetections: 0,
+      aiTotalAnomalies: 0,
+      simulationTime: 0,
+      anomalyCount: 0,
+      logs: [],
+    });
     try {
       const body = {
         name: `${simulationPreset?.name || 'Custom'} — ${new Date().toLocaleTimeString()}`,
@@ -527,8 +570,8 @@ export default function App() {
               anomalyCount={activeDrone?.anomalyCount || 0}
               droneId={activeDrone?.droneId || '—'}
               status={activeDrone?.status || 'idle'}
-              onYoloDetection={(dets, ts) => {
-                if (activeDrone?.instanceId) handleYoloDetection(activeDrone.instanceId, dets, ts);
+              onYoloDetection={(dets, ts, stats) => {
+                if (activeDrone?.instanceId) handleYoloDetection(activeDrone.instanceId, dets, ts, stats);
               }}
             />
           )}

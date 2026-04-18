@@ -8,6 +8,50 @@ const HARD_SYNC_THRESHOLD = 3;
 const SOFT_SYNC_THRESHOLD = 0.45;
 const JPEG_QUALITY = 0.8;
 const YOLO_DETECTION_HOLD_MS = 900;
+const MIN_TRACK_HITS_TO_COUNT = 3;
+const MIN_ANOMALY_HITS_TO_COUNT = 2;
+const TRACK_MAX_AGE_SECONDS = 1.2;
+const TRACK_CENTER_DISTANCE_PX = 180;
+const TRACK_MIN_IOU = 0.2;
+
+function bboxCenter(bbox) {
+  return {
+    x: (bbox?.x || 0) + ((bbox?.w || 0) / 2),
+    y: (bbox?.y || 0) + ((bbox?.h || 0) / 2),
+  };
+}
+
+function bboxIou(a, b) {
+  const ax1 = a?.x || 0;
+  const ay1 = a?.y || 0;
+  const ax2 = ax1 + (a?.w || 0);
+  const ay2 = ay1 + (a?.h || 0);
+  const bx1 = b?.x || 0;
+  const by1 = b?.y || 0;
+  const bx2 = bx1 + (b?.w || 0);
+  const by2 = by1 + (b?.h || 0);
+
+  const interX1 = Math.max(ax1, bx1);
+  const interY1 = Math.max(ay1, by1);
+  const interX2 = Math.min(ax2, bx2);
+  const interY2 = Math.min(ay2, by2);
+  const interW = Math.max(0, interX2 - interX1);
+  const interH = Math.max(0, interY2 - interY1);
+  const interArea = interW * interH;
+
+  if (interArea <= 0) return 0;
+
+  const areaA = (a?.w || 0) * (a?.h || 0);
+  const areaB = (b?.w || 0) * (b?.h || 0);
+  const union = areaA + areaB - interArea;
+  return union > 0 ? interArea / union : 0;
+}
+
+function centerDistance(a, b) {
+  const ca = bboxCenter(a);
+  const cb = bboxCenter(b);
+  return Math.hypot(ca.x - cb.x, ca.y - cb.y);
+}
 
 function canvasToBase64(canvas, quality) {
   return new Promise((resolve, reject) => {
@@ -46,12 +90,27 @@ export default function DroneView({
   const lastInferenceAtRef = useRef(0);
   const lastPositiveDetectionAtRef = useRef(0);
   const onYoloDetectionRef = useRef(onYoloDetection);
+  const trackedDetectionsRef = useRef([]);
+  const nextTrackIdRef = useRef(1);
+  const totalDetectionsRef = useRef(0);
+  const totalAnomaliesRef = useRef(0);
 
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [yoloDets, setYoloDets] = useState([]);
   const [yoloOnline, setYoloOnline] = useState(false);
   const [inferMs, setInferMs] = useState(null);
   const [overlayBox, setOverlayBox] = useState(null);
+
+  useEffect(() => {
+    onYoloDetectionRef.current = onYoloDetection;
+  }, [onYoloDetection]);
+
+  useEffect(() => {
+    trackedDetectionsRef.current = [];
+    nextTrackIdRef.current = 1;
+    totalDetectionsRef.current = 0;
+    totalAnomaliesRef.current = 0;
+  }, [videoPath]);
 
   const mockDets = detections.filter(d =>
     simulationTime >= d.timestamp && simulationTime < d.timestamp + 3
@@ -109,7 +168,15 @@ export default function DroneView({
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!videoLoaded || !video || status !== 'running') { setYoloDets([]); return; }
+    if (!videoLoaded || !video || status !== 'running') {
+      setYoloDets([]);
+      trackedDetectionsRef.current = [];
+      nextTrackIdRef.current = 1;
+      totalDetectionsRef.current = 0;
+      totalAnomaliesRef.current = 0;
+      onYoloDetectionRef.current?.([], video?.currentTime || 0, { totalDetections: 0, totalAnomalies: 0 });
+      return;
+    }
     let cancelled = false;
     processedFrameRef.current = 0;
     lastInferenceAtRef.current = 0;
@@ -134,8 +201,63 @@ export default function DroneView({
         const data = await res.json();
         setYoloOnline(true);
         setInferMs(Math.round(performance.now() - t0));
-        setYoloDets(data.detections || []);
-        if (data.detections?.length > 0) onYoloDetection?.(data.detections, video.currentTime);
+        const nextDetections = data.detections || [];
+        const frameTime = data.frameTimestamp ?? video.currentTime;
+        trackedDetectionsRef.current = trackedDetectionsRef.current.filter(
+          (track) => frameTime - track.lastSeen <= TRACK_MAX_AGE_SECONDS,
+        );
+        nextDetections.forEach((det) => {
+          const detName = det.assetName || det.className;
+          let matchedTrack = null;
+
+          for (const track of trackedDetectionsRef.current) {
+            if (track.name !== detName) continue;
+            const iou = bboxIou(track.bbox, det.bbox);
+            const distance = centerDistance(track.bbox, det.bbox);
+            if (iou >= TRACK_MIN_IOU || distance <= TRACK_CENTER_DISTANCE_PX) {
+              matchedTrack = track;
+              break;
+            }
+          }
+
+          if (!matchedTrack) {
+            matchedTrack = {
+              id: nextTrackIdRef.current++,
+              name: detName,
+              bbox: det.bbox,
+              hits: 0,
+              anomalyHits: 0,
+              counted: false,
+              anomalyCounted: false,
+              lastSeen: frameTime,
+            };
+            trackedDetectionsRef.current.push(matchedTrack);
+          }
+
+          matchedTrack.hits += 1;
+          if (det.isAnomaly) matchedTrack.anomalyHits += 1;
+          matchedTrack.bbox = det.bbox;
+          matchedTrack.lastSeen = frameTime;
+
+          if (!matchedTrack.counted && matchedTrack.hits >= MIN_TRACK_HITS_TO_COUNT) {
+            matchedTrack.counted = true;
+            totalDetectionsRef.current += 1;
+          }
+
+          if (!matchedTrack.anomalyCounted && matchedTrack.anomalyHits >= MIN_ANOMALY_HITS_TO_COUNT) {
+            matchedTrack.anomalyCounted = true;
+            totalAnomaliesRef.current += 1;
+          }
+        });
+        setYoloDets(nextDetections);
+        onYoloDetectionRef.current?.(
+          nextDetections,
+          frameTime,
+          {
+            totalDetections: totalDetectionsRef.current,
+            totalAnomalies: totalAnomaliesRef.current,
+          },
+        );
       } catch {
         setYoloOnline(false); setYoloDets([]);
       } finally {

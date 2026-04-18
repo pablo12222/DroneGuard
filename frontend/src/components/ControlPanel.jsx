@@ -39,16 +39,21 @@ export default function ControlPanel({
   const progress = drone?.progress || 0;
   const anomalyCount = drone?.anomalyCount || 0;
   const detections = drone?.detections || [];
+  const aiTotalDetections = drone?.aiTotalDetections || 0;
+  const aiTotalAnomalies = drone?.aiTotalAnomalies || 0;
   const simulationTime = drone?.simulationTime || 0;
   const videoPath = drone?.videoPath || '';
+  const useLiveVideoMetrics = Boolean(videoPath);
+  const displayedDetectionCount = useLiveVideoMetrics ? aiTotalDetections : detections.length;
+  const displayedAnomalyCount = useLiveVideoMetrics ? aiTotalAnomalies : anomalyCount;
 
   const sc = STATUS_CONFIG[status] || STATUS_CONFIG.idle;
   const isRunning = status === 'running';
   const canPause  = status === 'running' || status === 'paused';
   const canReset  = status !== 'idle' && status !== 'starting';
 
-  const highSev = detections.filter(d => d.severity === 'high').length;
-  const medSev  = detections.filter(d => d.severity === 'medium').length;
+  const highSev = useLiveVideoMetrics ? 0 : detections.filter(d => d.severity === 'high').length;
+  const medSev  = useLiveVideoMetrics ? 0 : detections.filter(d => d.severity === 'medium').length;
 
   const handleLaunchCustomRoute = () => {
     const id = customDroneId.trim() || `DRONE-${String(drones.size + 1).padStart(2, '0')}`;
@@ -166,8 +171,8 @@ export default function ControlPanel({
 
           {/* Metrics */}
           <div className="grid grid-cols-2 gap-2 p-4 border-b border-black/5">
-            <Metric label="Anomalies"  value={anomalyCount}      color="text-rose-600"  dotColor="bg-rose-500"  icon={<AlertTriangle size={13} />} />
-            <Metric label="Detections" value={detections.length} color="text-blue-600"  dotColor="bg-blue-500"  icon={<Activity size={13} />} />
+            <Metric label="Anomalies"  value={displayedAnomalyCount}      color="text-rose-600"  dotColor="bg-rose-500"  icon={<AlertTriangle size={13} />} />
+            <Metric label="Detections" value={displayedDetectionCount} color="text-blue-600"  dotColor="bg-blue-500"  icon={<Activity size={13} />} />
             <Metric label="Critical"   value={highSev}           color="text-rose-700"  dotColor="bg-rose-600" />
             <Metric label="Warnings"   value={medSev}            color="text-amber-600" dotColor="bg-amber-500" />
           </div>
