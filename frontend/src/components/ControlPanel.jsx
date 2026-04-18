@@ -188,35 +188,45 @@ export default function ControlPanel({
             </div>
           </div>
 
-          {/* Video feed */}
+          {/* Video feed — only for capability drone */}
           <div className="p-4 border-b border-black/5">
             <p className="text-[10px] text-black uppercase tracking-widest font-mono mb-3">Video Feed / AI Detection</p>
-            <input ref={fileInputRef} type="file" accept="video/*" onChange={handleVideoUpload} className="hidden" />
-
-            {videoPath ? (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-sm px-3 py-2">
-                  <FileVideo size={13} className="text-emerald-500 flex-shrink-0" />
-                  <p className="text-xs font-mono text-emerald-700 flex-1 truncate">{videoPath}</p>
-                  <button onClick={() => onSetVideoPath?.(drone.instanceId, '')}
-                    className="text-emerald-400 hover:text-emerald-600 transition flex-shrink-0">
-                    <X size={12} />
-                  </button>
-                </div>
-                <p className="text-[10px] text-emerald-600 font-mono text-center">YOLO AI detection active</p>
-              </div>
+            {drone.hasVideoCapability ? (
+              <>
+                <input ref={fileInputRef} type="file" accept="video/*" onChange={handleVideoUpload} className="hidden" />
+                {videoPath ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-sm px-3 py-2">
+                      <FileVideo size={13} className="text-emerald-500 flex-shrink-0" />
+                      <p className="text-xs font-mono text-emerald-700 flex-1 truncate">{videoPath}</p>
+                      <button onClick={() => onSetVideoPath?.(drone.instanceId, '')}
+                        className="text-emerald-400 hover:text-emerald-600 transition flex-shrink-0">
+                        <X size={12} />
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-emerald-600 font-mono text-center">YOLO AI detection active</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <button onClick={() => fileInputRef.current?.click()} disabled={uploadingVideo}
+                      className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-black/10 hover:border-[#E4007F]/40 rounded-sm py-2.5 text-xs text-black hover:text-[#E4007F] transition disabled:opacity-50">
+                      {uploadingVideo
+                        ? <><div className="w-3 h-3 border border-[#E4007F] border-t-transparent rounded-full animate-spin" /> Uploading...</>
+                        : <><Upload size={13} /> Upload video file</>}
+                    </button>
+                    <input type="text" value={videoPath}
+                      onChange={e => onSetVideoPath?.(drone.instanceId, e.target.value)}
+                      placeholder="or type filename (e.g. flight.mp4)"
+                      className="w-full bg-[#f5f5f7] border border-black/8 rounded-sm px-3 py-2 text-xs font-mono text-black placeholder-black/40 focus:outline-none focus:border-[#E4007F] transition" />
+                  </div>
+                )}
+              </>
             ) : (
-              <div className="space-y-2">
-                <button onClick={() => fileInputRef.current?.click()} disabled={uploadingVideo}
-                  className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-black/10 hover:border-[#E4007F]/40 rounded-sm py-2.5 text-xs text-black hover:text-[#E4007F] transition disabled:opacity-50">
-                  {uploadingVideo
-                    ? <><div className="w-3 h-3 border border-[#E4007F] border-t-transparent rounded-full animate-spin" /> Uploading...</>
-                    : <><Upload size={13} /> Upload video file</>}
-                </button>
-                <input type="text" value={videoPath}
-                  onChange={e => onSetVideoPath?.(drone.instanceId, e.target.value)}
-                  placeholder="or type filename (e.g. flight.mp4)"
-                  className="w-full bg-[#f5f5f7] border border-black/8 rounded-sm px-3 py-2 text-xs font-mono text-black placeholder-black/40 focus:outline-none focus:border-[#E4007F] transition" />
+              <div className="flex items-center gap-2 bg-[#f5f5f7] border border-black/8 rounded-sm px-3 py-2.5">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-black/30 flex-shrink-0">
+                  <path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.56 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/>
+                </svg>
+                <p className="text-xs font-mono text-black/30">NO SIGNAL</p>
               </div>
             )}
           </div>

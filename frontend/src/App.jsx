@@ -87,9 +87,42 @@ function buildCustomRouteData(waypoints) {
   };
 }
 
+const DEFAULT_DRONES = [
+  {
+    instanceId: 'drone_default_1',
+    droneId: 'DRONE-01',
+    simulationPreset: { id: 'silesia', name: 'Gliwice 110kV', routeId: 'route_silesia_110kv' },
+    color: '#E4007F',
+    videoPath: 'trasa1.mp4',
+    hasVideoCapability: true,
+    _startConfig: { preset: { id: 'silesia', name: 'Gliwice 110kV', routeId: 'route_silesia_110kv' }, droneId: 'DRONE-01', videoPath: 'trasa1.mp4', customRoute: null, routeData: null },
+  },
+  {
+    instanceId: 'drone_default_2',
+    droneId: 'DRONE-02',
+    simulationPreset: { id: 'rybnik', name: 'Rybnik 110kV', routeId: 'route_rybnik_110kv' },
+    color: '#3b82f6',
+    videoPath: '',
+    hasVideoCapability: false,
+    _startConfig: { preset: { id: 'rybnik', name: 'Rybnik 110kV', routeId: 'route_rybnik_110kv' }, droneId: 'DRONE-02', videoPath: null, customRoute: null, routeData: null },
+  },
+];
+
+function makeDefaultDroneState(d) {
+  return {
+    ...d,
+    missionId: null, status: 'ready', autoStart: true,
+    progress: 0, anomalyCount: 0, detections: [], yoloAnomalies: [],
+    aiLiveDetections: [], aiTotalDetections: 0, aiTotalAnomalies: 0,
+    logs: [], dronePosition: null, simulationTime: 0, weather: null, routeData: null,
+  };
+}
+
 export default function App() {
-  const [drones, setDrones] = useState(new Map());
-  const [activeDroneId, setActiveDroneId] = useState(null);
+  const [drones, setDrones] = useState(() => new Map(
+    DEFAULT_DRONES.map(d => [d.instanceId, makeDefaultDroneState(d)])
+  ));
+  const [activeDroneId, setActiveDroneId] = useState('drone_default_1');
   const [activeView, setActiveView] = useState('map');
   const [showAddModal, setShowAddModal] = useState(false);
   const [planningMode, setPlanningMode] = useState(false);
@@ -99,6 +132,7 @@ export default function App() {
   const eventSourcesRef = useRef(new Map());
   const handleSSEEventRef = useRef(null);
   const yoloLogCooldownRef = useRef(new Map());
+  const autoStartedRef = useRef(new Set());
 
   const activeDrone = drones.get(activeDroneId) || null;
 
@@ -293,6 +327,28 @@ export default function App() {
     return () => { eventSourcesRef.current.forEach(es => es.close()); };
   }, []);
 
+  // Load routeData for default drones on mount
+  useEffect(() => {
+    DEFAULT_DRONES.forEach(d => {
+      if (d._startConfig?.preset?.routeId) {
+        api.get(`/api/routes/${d._startConfig.preset.routeId}`)
+          .then(rd => updateDrone(d.instanceId, { routeData: rd }))
+          .catch(() => {});
+      }
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-start drones flagged with autoStart
+  const handleStartDroneRef = useRef(null);
+  useEffect(() => {
+    drones.forEach((drone) => {
+      if (drone.autoStart && drone.status === 'ready' && !autoStartedRef.current.has(drone.instanceId)) {
+        autoStartedRef.current.add(drone.instanceId);
+        handleStartDroneRef.current?.(drone.instanceId);
+      }
+    });
+  }, [drones]);
+
   const handleSetVideoPath = useCallback((instanceId, path) => {
     updateDrone(instanceId, { videoPath: path });
   }, [updateDrone]);
@@ -323,6 +379,7 @@ export default function App() {
       weather: null,
       routeData,
       color,
+      hasVideoCapability: false,
       videoPath: videoPath || '',
       _startConfig: { preset, droneId: resolvedId, videoPath, customRoute, routeData },
     };
@@ -364,6 +421,7 @@ export default function App() {
       }));
     }
   }, [drones, updateDrone, connectDroneSSE]);
+  handleStartDroneRef.current = handleStartDrone;
 
   const handleRemoveDrone = useCallback((instanceId) => {
     const drone = drones.get(instanceId);
@@ -488,7 +546,7 @@ export default function App() {
     .filter(d => d.instanceId !== activeDroneId)
     .map(d => ({ instanceId: d.instanceId, droneId: d.droneId, dronePosition: d.dronePosition, color: d.color, routeData: d.routeData, progress: d.progress }));
 
-  const allYoloAnomalies = [...drones.values()].flatMap(d => d.yoloAnomalies || []);
+  const activeYoloAnomalies = activeDrone?.yoloAnomalies || [];
 
   const headerStatus = activeDrone?.status || 'idle';
   const statusDot = {
@@ -563,7 +621,7 @@ export default function App() {
               progress={activeDrone?.progress || 0}
               activeColor={activeDrone?.color || '#E4007F'}
               otherDrones={otherDrones}
-              yoloAnomalies={allYoloAnomalies}
+              yoloAnomalies={activeYoloAnomalies}
               planningMode={planningMode}
               customWaypoints={customWaypoints}
               onAddWaypoint={handleAddWaypoint}
@@ -578,6 +636,7 @@ export default function App() {
               anomalyCount={activeDrone?.anomalyCount || 0}
               droneId={activeDrone?.droneId || '—'}
               status={activeDrone?.status || 'idle'}
+              hasVideoCapability={activeDrone?.hasVideoCapability ?? false}
               onYoloDetection={(dets, ts, stats) => {
                 if (activeDrone?.instanceId) handleYoloDetection(activeDrone.instanceId, dets, ts, stats);
               }}

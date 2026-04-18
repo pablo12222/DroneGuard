@@ -79,6 +79,7 @@ function canvasToBase64(canvas, quality) {
 export default function DroneView({
   videoPath, detections, simulationTime, dronePosition,
   progress, anomalyCount, droneId, status, onYoloDetection, onYoloAnomaly,
+  hasVideoCapability = false,
 }) {
   const containerRef = useRef(null);
   const videoRef = useRef(null);
@@ -98,6 +99,7 @@ export default function DroneView({
   const totalAnomaliesRef = useRef(0);
 
   const [videoLoaded, setVideoLoaded] = useState(false);
+  const [videoEnded, setVideoEnded] = useState(false);
   const [yoloDets, setYoloDets] = useState([]);
   const [yoloOnline, setYoloOnline] = useState(false);
   const [inferMs, setInferMs] = useState(null);
@@ -112,6 +114,8 @@ export default function DroneView({
     nextTrackIdRef.current = 1;
     totalDetectionsRef.current = 0;
     totalAnomaliesRef.current = 0;
+    setVideoEnded(false);
+    setVideoLoaded(false);
   }, [videoPath]);
 
   const mockDets = detections.filter(d =>
@@ -330,20 +334,27 @@ export default function DroneView({
     );
   };
 
+  if (!hasVideoCapability) {
+    return <NoSignalView droneId={droneId} simulationTime={simulationTime} />;
+  }
+
   return (
     <div className="relative w-full h-full bg-black flex items-center justify-center overflow-hidden">
-      {videoUrl ? (
+      {videoEnded ? (
+        <NoCameraFeedView droneId={droneId} simulationTime={simulationTime} />
+      ) : videoUrl ? (
         <div ref={containerRef} className="relative w-full h-full flex items-center justify-center">
           <video ref={videoRef} className="w-full h-full object-contain" src={videoUrl}
             crossOrigin="anonymous"
             onLoadedData={() => setVideoLoaded(true)}
             onLoadedMetadata={() => setVideoLoaded(true)}
+            onEnded={() => setVideoEnded(true)}
             onError={() => { setVideoLoaded(false); setYoloOnline(false); }}
             muted playsInline />
           {renderOverlay()}
         </div>
       ) : (
-        <NoVideoView simulationTime={simulationTime} droneId={droneId} />
+        <NoSignalView droneId={droneId} simulationTime={simulationTime} />
       )}
 
       {/* HUD */}
@@ -412,29 +423,42 @@ export default function DroneView({
   );
 }
 
-function NoVideoView({ simulationTime, droneId }) {
+function NoSignalView({ droneId, simulationTime }) {
   return (
-    <div className="w-full h-full bg-[#0a0a0a] flex flex-col items-center justify-center relative overflow-hidden">
-      <div className="absolute inset-0 opacity-10"
-        style={{
-          backgroundImage: 'linear-gradient(#E4007F 1px, transparent 1px), linear-gradient(90deg, #E4007F 1px, transparent 1px)',
-          backgroundSize: '60px 60px',
-        }} />
-      <div className="relative z-10 flex flex-col items-center gap-6">
-        <div className="w-24 h-24 relative">
-          <div className="absolute inset-0 border-2 border-[#E4007F]/30 rounded-full animate-ping" />
-          <div className="absolute inset-2 border border-[#E4007F]/50 rounded-full animate-spin" style={{ animationDuration: '3s' }} />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Camera size={28} className="text-[#E4007F]" />
-          </div>
+    <div className="w-full h-full bg-[#080808] flex flex-col items-center justify-center relative overflow-hidden select-none">
+      {/* Scanline noise */}
+      <div className="absolute inset-0 opacity-[0.04]"
+        style={{ backgroundImage: 'repeating-linear-gradient(0deg, #fff 0px, #fff 1px, transparent 1px, transparent 3px)', backgroundSize: '100% 3px' }} />
+      <div className="relative z-10 flex flex-col items-center gap-5">
+        <div className="w-20 h-20 relative flex items-center justify-center">
+          <div className="absolute inset-0 rounded-full border border-white/10" />
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5">
+            <path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.56 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/>
+          </svg>
         </div>
-        <div className="text-center font-mono">
-          <p className="text-white/60 text-sm mb-1">DRONE CAMERA FEED</p>
-          <p className="text-white/30 text-xs">{droneId} · T+{simulationTime.toFixed(0)}s</p>
+        <div className="text-center font-mono tracking-widest">
+          <p className="text-white/20 text-xs uppercase mb-1">NO SIGNAL</p>
+          <p className="text-white/10 text-[10px]">{droneId} · T+{simulationTime?.toFixed(0) ?? 0}s</p>
         </div>
-        <div className="text-center space-y-1">
-          <p className="text-white/20 text-xs font-mono">Place video in project-root/videos/</p>
-          <p className="text-white/20 text-xs font-mono">Enter filename in control panel</p>
+      </div>
+    </div>
+  );
+}
+
+function NoCameraFeedView({ droneId, simulationTime }) {
+  return (
+    <div className="w-full h-full bg-[#0a0a0a] flex flex-col items-center justify-center relative overflow-hidden select-none">
+      <div className="absolute inset-0 opacity-[0.03]"
+        style={{ backgroundImage: 'repeating-linear-gradient(0deg, #fff 0px, #fff 1px, transparent 1px, transparent 3px)', backgroundSize: '100% 3px' }} />
+      <div className="relative z-10 flex flex-col items-center gap-5">
+        <div className="w-20 h-20 relative flex items-center justify-center">
+          <div className="absolute inset-0 rounded-full border border-[#E4007F]/20 animate-ping" style={{ animationDuration: '2s' }} />
+          <div className="absolute inset-0 rounded-full border border-[#E4007F]/10" />
+          <Camera size={28} className="text-[#E4007F]/40" />
+        </div>
+        <div className="text-center font-mono tracking-widest">
+          <p className="text-[#E4007F]/50 text-xs uppercase mb-1">NO CAMERA FEED</p>
+          <p className="text-white/20 text-[10px]">{droneId} · T+{simulationTime?.toFixed(0) ?? 0}s</p>
         </div>
       </div>
     </div>

@@ -70,7 +70,15 @@ export default function DroneFleet({
                 style={drone.instanceId === activeDroneId ? { backgroundColor: drone.color } : {}}
               />
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-mono font-semibold text-black truncate">{drone.droneId}</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-xs font-mono font-semibold text-black truncate">{drone.droneId}</p>
+                  {(drone.anomalyCount > 0 || drone.yoloAnomalies?.length > 0) && (
+                    <span className="flex-shrink-0 flex items-center gap-1 bg-rose-500 text-white text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-full">
+                      <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                      {(drone.anomalyCount || 0) + (drone.yoloAnomalies?.length || 0)}
+                    </span>
+                  )}
+                </div>
                 <p className="text-[10px] text-black truncate">
                   {drone.simulationPreset?.name || 'Custom route'}
                 </p>
