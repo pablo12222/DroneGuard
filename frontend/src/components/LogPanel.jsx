@@ -22,8 +22,8 @@ export default function LogPanel({ logs }) {
       {/* Header */}
       <div className="flex items-center gap-2 px-4 py-3 border-b border-black/4 flex-shrink-0 bg-white">
         <Terminal size={13} className="text-black" />
-        <span className="text-[10px] text-black uppercase tracking-widest font-mono">System Log</span>
-        <span className="ml-auto text-[10px] text-black font-mono bg-[#f5f5f7] px-2 py-0.5 rounded-sm">
+        <span className="text-[13px] text-black uppercase tracking-widest font-mono">System Log</span>
+        <span className="ml-auto text-[13px] text-black font-mono bg-[#f5f5f7] px-2 py-0.5 rounded-sm">
           {logs.length}
         </span>
       </div>

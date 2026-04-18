@@ -501,13 +501,13 @@ export default function App() {
   return (
     <div className="flex flex-col h-screen bg-[#f5f5f7] text-black overflow-hidden">
       <header className="flex items-center justify-between px-6 py-3 bg-white border-b border-black/6 shadow-sm z-50 flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-[#E4007F] rounded flex items-center justify-center shadow-md shadow-[#E4007F]/25">
-            <Zap size={17} className="text-white" />
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-[#E4007F] rounded flex items-center justify-center shadow-lg shadow-[#E4007F]/30 flex-shrink-0">
+            <Zap size={26} className="text-white" />
           </div>
-          <div>
-            <h1 className="text-sm font-semibold tracking-tight text-black leading-none">DroneGuard</h1>
-            <p className="text-[10px] text-black font-mono tracking-widest mt-0.5 uppercase">Energy Infrastructure Inspection</p>
+          <div className="flex flex-col justify-center">
+            <h1 className="text-xl font-bold tracking-tight text-black leading-none">DroneGuard</h1>
+            <p className="text-[11px] text-black font-mono tracking-widest mt-1.5 uppercase">Energy Infrastructure Inspection</p>
           </div>
         </div>
         <div className="flex items-center gap-8">
