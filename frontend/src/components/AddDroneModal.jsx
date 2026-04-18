@@ -89,42 +89,42 @@ export default function AddDroneModal({ onClose, onAdd, droneCount }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-6">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-black/5">
           <div>
             <h2 className="text-base font-semibold text-[#1d1d1f]">Add Drone</h2>
-            <p className="text-xs text-[#6e6e73] mt-0.5">Choose a simulation and configure the drone</p>
+            <p className="text-xs text-black mt-0.5">Choose a simulation and configure the drone</p>
           </div>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#f5f5f7] text-[#6e6e73] transition">
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded hover:bg-[#f5f5f7] text-black transition">
             <X size={16} />
           </button>
         </div>
 
         {/* Simulation presets */}
         <div className="p-6 space-y-3">
-          <p className="text-[10px] text-[#aeaeb2] uppercase tracking-widest font-mono mb-4">Simulation Type</p>
+          <p className="text-[10px] text-black uppercase tracking-widest font-mono mb-4">Simulation Type</p>
           {SIMULATION_PRESETS.map(preset => {
             const isSelected = selected?.id === preset.id;
             return (
               <button key={preset.id} onClick={() => setSelected(preset)}
-                className="w-full text-left p-4 rounded-2xl border-2 transition-all"
+                className="w-full text-left p-4 rounded border-2 transition-all"
                 style={isSelected
                   ? { borderColor: preset.color, backgroundColor: preset.color + '12' }
                   : { borderColor: 'rgba(0,0,0,0.08)', backgroundColor: '#f5f5f7' }}>
                 <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5"
+                  <div className="w-9 h-9 rounded flex items-center justify-center flex-shrink-0 mt-0.5"
                     style={{ backgroundColor: preset.color + '20' }}>
                     <preset.Icon size={16} style={{ color: preset.color }} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-semibold text-[#1d1d1f]">{preset.name}</p>
-                      <span className="text-[10px] font-mono text-[#aeaeb2] bg-black/5 px-2 py-0.5 rounded-full">{preset.region}</span>
+                      <span className="text-[10px] font-mono text-black bg-black/5 px-2 py-0.5 rounded">{preset.region}</span>
                     </div>
-                    <p className="text-xs text-[#6e6e73] mt-0.5">{preset.description}</p>
-                    <p className="text-[11px] font-mono text-[#aeaeb2] mt-1.5">{preset.details}</p>
+                    <p className="text-xs text-black mt-0.5">{preset.description}</p>
+                    <p className="text-[11px] font-mono text-black mt-1.5">{preset.details}</p>
                   </div>
                   {isSelected && (
                     <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
@@ -142,26 +142,26 @@ export default function AddDroneModal({ onClose, onAdd, droneCount }) {
 
         {/* Drone ID */}
         <div className="px-6 pb-4">
-          <label className="text-xs text-[#6e6e73] block mb-1.5">Drone ID</label>
+          <label className="text-xs text-black block mb-1.5">Drone ID</label>
           <input type="text" value={droneId} onChange={e => setDroneId(e.target.value)}
-            className="w-full bg-[#f5f5f7] border border-black/8 rounded-xl px-3 py-2 text-sm font-mono text-[#1d1d1f] focus:outline-none focus:border-[#E4007F] focus:ring-1 focus:ring-[#E4007F]/20 transition" />
+            className="w-full bg-[#f5f5f7] border border-black/8 rounded px-3 py-2 text-sm font-mono text-[#1d1d1f] focus:outline-none focus:border-[#E4007F] focus:ring-1 focus:ring-[#E4007F]/20 transition" />
         </div>
 
         {/* Video upload */}
         <div className="px-6 pb-5">
-          <label className="text-xs text-[#6e6e73] block mb-2">Drone Video Feed <span className="text-[#c7c7cc]">(optional — enables YOLO AI detection)</span></label>
+          <label className="text-xs text-black block mb-2">Drone Video Feed <span className="text-black/40">(optional — enables YOLO AI detection)</span></label>
           <input ref={fileInputRef} type="file" accept="video/*" onChange={handleFileChange} className="hidden" />
 
           {!uploadedFilename ? (
             <button onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
-              className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-black/10 hover:border-[#E4007F]/40 hover:bg-[#E4007F]/3 rounded-xl py-3 text-xs text-[#6e6e73] hover:text-[#E4007F] transition disabled:opacity-50">
+              className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-black/10 hover:border-[#E4007F]/40 hover:bg-[#E4007F]/3 rounded py-3 text-xs text-black hover:text-[#E4007F] transition disabled:opacity-50">
               {uploading
                 ? <><div className="w-3 h-3 border border-[#E4007F] border-t-transparent rounded-full animate-spin" /> Uploading...</>
                 : <><Upload size={14} /> Upload video file (.mp4, .webm)</>}
             </button>
           ) : (
-            <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5">
+            <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded px-4 py-2.5">
               <CheckCircle size={15} className="text-emerald-500 flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-mono text-emerald-700 truncate">{uploadedFilename}</p>
@@ -174,27 +174,27 @@ export default function AddDroneModal({ onClose, onAdd, droneCount }) {
             </div>
           )}
           {!uploadedFilename && (
-            <p className="text-[10px] text-[#c7c7cc] font-mono mt-2 text-center">
-              Or place files in <span className="text-[#aeaeb2]">project-root/videos/</span> and type the name below
+            <p className="text-[10px] text-black font-mono mt-2 text-center">
+              Or place files in <span className="text-black/60">project-root/videos/</span> and type the name below
             </p>
           )}
           {!uploadedFilename && (
             <input type="text" value={uploadedFilename}
               onChange={e => setUploadedFilename(e.target.value)}
               placeholder="e.g. inspection.mp4"
-              className="mt-2 w-full bg-[#f5f5f7] border border-black/8 rounded-xl px-3 py-2 text-xs font-mono text-[#1d1d1f] placeholder-[#c7c7cc] focus:outline-none focus:border-[#E4007F] transition" />
+              className="mt-2 w-full bg-[#f5f5f7] border border-black/8 rounded px-3 py-2 text-xs font-mono text-[#1d1d1f] placeholder-black/30 focus:outline-none focus:border-[#E4007F] transition" />
           )}
         </div>
 
         {/* Actions */}
         <div className="flex gap-3 px-6 pb-6">
           <button onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl text-sm font-medium text-[#6e6e73] bg-[#f5f5f7] hover:bg-[#ebebeb] transition">
+            className="flex-1 py-2.5 rounded text-sm font-medium text-black bg-[#f5f5f7] hover:bg-[#ebebeb] transition">
             Cancel
           </button>
           <button onClick={handleAdd}
             disabled={!selected || loading || !droneId.trim()}
-            className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white bg-[#E4007F] hover:bg-[#c8006f] disabled:opacity-40 disabled:cursor-not-allowed transition shadow-md shadow-[#E4007F]/20 disabled:shadow-none">
+            className="flex-1 py-2.5 rounded text-sm font-semibold text-white bg-[#E4007F] hover:bg-[#c8006f] disabled:opacity-40 disabled:cursor-not-allowed transition shadow-md shadow-[#E4007F]/20 disabled:shadow-none">
             {loading ? 'Launching...' : 'Add & Launch'}
           </button>
         </div>

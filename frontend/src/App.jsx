@@ -28,7 +28,7 @@ const Toast = forwardRef((_, ref) => {
 
   if (!visible) return null;
   return (
-    <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-3 px-5 py-3 rounded-2xl shadow-xl border text-sm font-medium
+    <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-3 px-5 py-3 rounded shadow-xl border text-sm font-medium
       ${type === 'error'
         ? 'bg-red-50 border-red-200 text-red-800 shadow-red-100'
         : 'bg-amber-50 border-amber-200 text-amber-800 shadow-amber-100'}`}>
@@ -50,16 +50,15 @@ function haversineKm(a, b) {
 
 function routeSpeedKmS(routeData) {
   const wps = routeData?.waypoints;
-  if (!wps || wps.length < 2 || !routeData.estimatedDuration) return 0.05; // fallback ~50 m/s
+  if (!wps || wps.length < 2 || !routeData.estimatedDuration) return 0.05;
   let total = 0;
   for (let i = 1; i < wps.length; i++) total += haversineKm(wps[i - 1], wps[i]);
-  return total / routeData.estimatedDuration; // km/s
+  return total / routeData.estimatedDuration;
 }
 
-const SIMULATION_SPEED_KM_S = 0.11; // ~110 m/s — matches preset route pacing
+const SIMULATION_SPEED_KM_S = 0.11;
 
 function buildCustomRouteData(waypoints) {
-  // Compute cumulative timestamps based on real distance at simulation speed
   const timestamps = [0];
   let totalKm = 0;
   for (let i = 1; i < waypoints.length; i++) {
@@ -81,7 +80,7 @@ function buildCustomRouteData(waypoints) {
       type: 'waypoint',
     })),
     estimatedDuration: Math.round(totalKm / SIMULATION_SPEED_KM_S),
-    totalDistance: Math.round(totalKm * 1000), // metres
+    totalDistance: Math.round(totalKm * 1000),
     region: 'Custom',
     lineVoltage: 'N/A',
     operator: 'Manual',
@@ -136,7 +135,7 @@ export default function App() {
         nextLogs.push({
           id: Date.now() + Math.random(),
           level: det.isAnomaly ? 'warning' : 'info',
-          message: `YOLO: ${det.className} â€” ${(det.confidence * 100).toFixed(0)}% conf Â· ${det.severity} severity`,
+          message: `YOLO: ${det.className} â€" ${(det.confidence * 100).toFixed(0)}% conf Â· ${det.severity} severity`,
           timestamp: parseFloat(ts.toFixed(1)),
         });
       });
@@ -155,7 +154,6 @@ export default function App() {
     }
   }, [updateDrone]);
 
-  // SSE handler kept fresh via ref to avoid stale closures
   handleSSEEventRef.current = (instanceId, event) => {
     switch (event.type) {
       case 'drone_position':
@@ -193,7 +191,6 @@ export default function App() {
         break;
       case 'inspection_complete':
         updateDrone(instanceId, { status: 'complete', progress: 100 });
-        // Animate return to start at simulation speed
         setDrones(prev => {
           const drone = prev.get(instanceId);
           if (!drone) return prev;
@@ -246,7 +243,6 @@ export default function App() {
     eventSourcesRef.current.set(missionId, es);
   }, []);
 
-  // Cleanup SSE on unmount
   useEffect(() => {
     return () => { eventSourcesRef.current.forEach(es => es.close()); };
   }, []);
@@ -283,7 +279,6 @@ export default function App() {
     setDrones(prev => new Map([...prev, [instanceId, newDrone]]));
     setActiveDroneId(instanceId);
 
-    // Load route data for map (preset route only)
     if (!customRoute && preset?.routeId) {
       api.get(`/api/routes/${preset.routeId}`)
         .then(rd => updateDrone(instanceId, { routeData: rd }))
@@ -416,7 +411,6 @@ export default function App() {
     if (planningMode) setCustomWaypoints([]);
   }, [planningMode]);
 
-  // Other drones' positions for secondary map markers
   const otherDrones = [...drones.values()].filter(
     d => d.instanceId !== activeDroneId && d.dronePosition
   ).map(d => ({ instanceId: d.instanceId, droneId: d.droneId, dronePosition: d.dronePosition, color: d.color }));
@@ -438,7 +432,7 @@ export default function App() {
     <div className="flex flex-col h-screen bg-[#f5f5f7] text-black overflow-hidden">
       <header className="flex items-center justify-between px-6 py-3 bg-white border-b border-black/6 shadow-sm z-50 flex-shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-[#E4007F] rounded-xl flex items-center justify-center shadow-md shadow-[#E4007F]/25">
+          <div className="w-9 h-9 bg-[#E4007F] rounded flex items-center justify-center shadow-md shadow-[#E4007F]/25">
             <Zap size={17} className="text-white" />
           </div>
           <div>
@@ -450,7 +444,7 @@ export default function App() {
           {activeDrone?.weather && <WeatherPanel weather={activeDrone.weather} />}
           <div className="flex items-center gap-4">
             {drones.size > 0 && (
-              <span className="text-xs text-[#6e6e73] font-mono">
+              <span className="text-xs text-black font-mono">
                 {drones.size} drone{drones.size !== 1 ? 's' : ''} active
               </span>
             )}

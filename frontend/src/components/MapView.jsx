@@ -243,14 +243,14 @@ export default function MapView({
 
       {/* Planning mode overlay */}
       {planningMode && (
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[400] bg-indigo-600 text-white text-xs font-mono px-4 py-2 rounded-sm shadow-lg">
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[400] bg-indigo-600 text-white text-xs font-mono px-4 py-2 rounded shadow-lg">
           Planning mode — click map to add waypoint ({customWaypoints.length} added)
         </div>
       )}
 
       {/* Legend */}
-      <div className="absolute top-3 right-3 z-[400] bg-white/90 backdrop-blur-sm border border-black/6 rounded-sm px-4 py-3 shadow-sm space-y-1.5 text-xs font-mono">
-        <p className="text-[#6e6e73] uppercase tracking-widest text-[10px] mb-2">Legend</p>
+      <div className="absolute top-3 right-3 z-[400] bg-white/90 backdrop-blur-sm border border-black/6 rounded px-4 py-3 shadow-sm space-y-1.5 text-xs font-mono">
+        <p className="text-black uppercase tracking-widest text-[10px] mb-2">Legend</p>
         <LegendRow color="bg-[#E4007F]" label="Visited path" line />
         <LegendRow color="bg-slate-300"  label="Planned route" dashed />
         <LegendRow color="bg-indigo-400" label="Power tower" dot />
@@ -258,15 +258,15 @@ export default function MapView({
         {otherDrones.length > 0 && otherDrones.map(d => (
           <div key={d.instanceId} className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
-            <span className="text-[#6e6e73]">{d.droneId}</span>
+            <span className="text-black">{d.droneId}</span>
           </div>
         ))}
       </div>
 
       {/* Telemetry chip */}
       {dronePosition && (
-        <div className="absolute bottom-3 left-3 z-[400] bg-white/90 backdrop-blur-sm border border-black/6 rounded-sm px-4 py-3 shadow-sm text-xs font-mono space-y-0.5">
-          <p className="text-[#aeaeb2] uppercase tracking-widest text-[10px] mb-1.5">Telemetry</p>
+        <div className="absolute bottom-3 left-3 z-[400] bg-white/90 backdrop-blur-sm border border-black/6 rounded px-4 py-3 shadow-sm text-xs font-mono space-y-0.5">
+          <p className="text-black uppercase tracking-widest text-[10px] mb-1.5">Telemetry</p>
           <TelRow label="LAT" value={dronePosition.lat.toFixed(6)} />
           <TelRow label="LNG" value={dronePosition.lng.toFixed(6)} />
           <TelRow label="ALT" value={`${dronePosition.altitude?.toFixed(0) ?? '--'} m`} />
@@ -274,11 +274,11 @@ export default function MapView({
       )}
 
       {/* Map style toggle */}
-      <div className="absolute bottom-3 right-3 z-[400] flex gap-1 bg-white/90 backdrop-blur-sm border border-black/6 rounded-sm p-1 shadow-sm">
+      <div className="absolute bottom-3 right-3 z-[400] flex gap-1 bg-white/90 backdrop-blur-sm border border-black/6 rounded p-1 shadow-sm">
         {MAP_STYLES.map(s => (
           <button key={s.id} onClick={() => setStyleId(s.id)}
-            className={`px-3 py-1.5 rounded-sm text-[11px] font-mono font-medium transition-all
-              ${styleId === s.id ? 'bg-[#E4007F] text-white shadow-sm' : 'text-[#6e6e73] hover:text-[#1d1d1f] hover:bg-black/5'}`}>
+            className={`px-3 py-1.5 rounded text-[11px] font-mono font-medium transition-all
+              ${styleId === s.id ? 'bg-[#E4007F] text-white shadow-sm' : 'text-black hover:text-[#1d1d1f] hover:bg-black/5'}`}>
             {s.label}
           </button>
         ))}
@@ -286,8 +286,8 @@ export default function MapView({
 
       {!routeData && !planningMode && (
         <div className="absolute inset-0 flex items-center justify-center z-[400] pointer-events-none">
-          <div className="bg-white/90 border border-black/6 rounded-sm px-8 py-6 shadow-sm text-center">
-            <p className="text-[#6e6e73] text-sm">Select a drone or plan a custom route</p>
+          <div className="bg-white/90 border border-black/6 rounded px-8 py-6 shadow-sm text-center">
+            <p className="text-black text-sm">Select a drone or plan a custom route</p>
           </div>
         </div>
       )}
@@ -301,7 +301,7 @@ function LegendRow({ color, label, line, dashed, dot }) {
       {dot    && <span className={`w-2.5 h-2.5 rounded-full ${color} flex-shrink-0`} />}
       {line   && <span className={`w-5 h-0.5 rounded-sm ${color} flex-shrink-0`} />}
       {dashed && <span className="w-5 flex-shrink-0 border-t-2 border-dashed border-slate-300" />}
-      <span className="text-[#6e6e73]">{label}</span>
+      <span className="text-black">{label}</span>
     </div>
   );
 }
@@ -309,28 +309,28 @@ function LegendRow({ color, label, line, dashed, dot }) {
 function TelRow({ label, value }) {
   return (
     <div className="flex justify-between gap-5">
-      <span className="text-[#aeaeb2]">{label}</span>
+      <span className="text-black">{label}</span>
       <span className="text-[#1d1d1f] font-medium">{value}</span>
     </div>
   );
 }
 
 function popupTower(wp, i) {
-  return `<div style="background:#fff;color:#1d1d1f;padding:10px 12px;border-radius:4px;font-family:monospace;font-size:12px;min-width:170px;border:1px solid rgba(0,0,0,0.08);box-shadow:0 4px 12px rgba(0,0,0,0.08)">
+  return `<div style="background:#fff;color:#1d1d1f;padding:10px 12px;border-radius:2px;font-family:monospace;font-size:12px;min-width:170px;border:1px solid rgba(0,0,0,0.08);box-shadow:0 4px 12px rgba(0,0,0,0.08)">
     <b style="color:#6366f1;font-size:13px">${wp.name || `Tower T-${String(i + 1).padStart(3, '0')}`}</b><br/>
-    <span style="color:#aeaeb2">Lat: ${wp.lat.toFixed(5)}</span><br/>
-    <span style="color:#aeaeb2">Lng: ${wp.lng.toFixed(5)}</span><br/>
-    <span style="color:#aeaeb2">Alt: ${wp.altitude}m</span>
+    <span style="color:#111">Lat: ${wp.lat.toFixed(5)}</span><br/>
+    <span style="color:#111">Lng: ${wp.lng.toFixed(5)}</span><br/>
+    <span style="color:#111">Alt: ${wp.altitude}m</span>
   </div>`;
 }
 
 function popupDetection(det) {
   const sev = det.severity === 'high' ? '#ef4444' : det.severity === 'medium' ? '#f59e0b' : '#3b82f6';
-  return `<div style="background:#fff;color:#1d1d1f;padding:12px 14px;border-radius:4px;font-family:monospace;font-size:12px;min-width:230px;border:1px solid #fecaca;box-shadow:0 4px 16px rgba(239,68,68,0.12)">
+  return `<div style="background:#fff;color:#1d1d1f;padding:12px 14px;border-radius:2px;font-family:monospace;font-size:12px;min-width:230px;border:1px solid #fecaca;box-shadow:0 4px 16px rgba(239,68,68,0.12)">
     <b style="color:#ef4444;font-size:13px">⚠ ${det.className.toUpperCase()}</b><br/>
-    <span style="color:#6e6e73;font-size:11px;line-height:1.5">${det.description}</span><br/><br/>
-    <span style="color:#aeaeb2">Severity: </span><b style="color:${sev}">${det.severity.toUpperCase()}</b><br/>
-    <span style="color:#aeaeb2">Confidence: </span><b style="color:#1d1d1f">${(det.confidence * 100).toFixed(1)}%</b><br/>
-    <span style="color:#aeaeb2">Tower T-${String(det.waypointId + 1).padStart(3, '0')}</span> &nbsp;·&nbsp; <span style="color:#aeaeb2">T+${det.timestamp}s</span>
+    <span style="color:#111;font-size:11px;line-height:1.5">${det.description}</span><br/><br/>
+    <span style="color:#111">Severity: </span><b style="color:${sev}">${det.severity.toUpperCase()}</b><br/>
+    <span style="color:#111">Confidence: </span><b style="color:#1d1d1f">${(det.confidence * 100).toFixed(1)}%</b><br/>
+    <span style="color:#111">Tower T-${String(det.waypointId + 1).padStart(3, '0')}</span> &nbsp;·&nbsp; <span style="color:#111">T+${det.timestamp}s</span>
   </div>`;
 }
