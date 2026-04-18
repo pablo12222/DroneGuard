@@ -18,6 +18,32 @@ DroneGuard is a proof-of-concept system for **power line inspection** using a dr
 - `models/` - detector and classifier weights
 - `videos/` - inspection videos
 
+## 🏗️ Architecture
+
+```text
+Frontend (React)
+    |
+    | HTTP + SSE
+    v
+Backend (Express)
+    |- mission simulation
+    |- routes / detections API
+    |- video upload + /videos static hosting
+    |
+    | frame requests
+    v
+YOLO Service (FastAPI)
+    |- detector model
+    `- classifier models
+```
+
+### Flow
+
+1. The backend starts an inspection mission and streams telemetry.
+2. The frontend displays the route, logs, and drone state.
+3. In Drone View, video frames are sent to the YOLO service.
+4. YOLO returns detections, and the frontend renders boxes live on the video.
+
 ## ✅ Requirements
 
 - `Node.js`
@@ -43,13 +69,30 @@ Then open:
 
 ## 🎥 Video
 
-- put your file into `videos/`
+Videos are handled from the root `videos/` folder.
+
+You can:
+
+- copy a file manually into `videos/`
 - or upload it from the app
-- start a mission and open **Drone View**
+
+Supported flow:
+
+1. place or upload a file such as `trasa1.mp4`
+2. start a mission
+3. open **Drone View**
+4. the frontend loads the file from `/videos/<filename>`
+5. if YOLO is running, live boxes are drawn over the video
 
 Default demo video:
 
 - `trasa1.mp4`
+
+Useful endpoints:
+
+- `GET /api/videos` - list available files
+- `POST /api/videos/upload` - upload a file
+- `GET /videos/<filename>` - direct video access
 
 ## 🤖 YOLO
 
@@ -94,4 +137,3 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 - the backend runs on port `3001`
 - the frontend runs on port `5173`
 - the YOLO service runs on port `8000`
-

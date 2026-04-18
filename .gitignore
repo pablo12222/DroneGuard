@@ -4,6 +4,7 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+.tmp/
 
 # === NODE.JS & REACT (Frontend / Backend JS) ===
 node_modules/
