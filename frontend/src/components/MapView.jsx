@@ -282,7 +282,7 @@ export default function MapView({
 
       {/* Legend */}
       <div className="absolute top-3 right-3 z-[400] bg-white/90 backdrop-blur-sm border border-black/6 rounded-sm px-4 py-3 shadow-sm space-y-1.5 text-xs font-mono">
-        <p className="text-black uppercase tracking-widest text-[10px] mb-2">Legend</p>
+        <p className="text-black uppercase tracking-widest text-[12px] mb-2">Legend</p>
         <LegendRow color="bg-[#E4007F]" label="Visited path" line />
         <LegendRow color="bg-slate-300"  label="Planned route" dashed />
         <LegendRow color="bg-indigo-400" label="Power tower" dot />
@@ -290,7 +290,7 @@ export default function MapView({
         {otherDrones.filter(d => d.routeData).map(d => (
           <div key={d.instanceId} className="flex items-center gap-2">
             <span className="w-5 h-0.5 rounded-sm flex-shrink-0" style={{ backgroundColor: d.color }} />
-            <span className="text-[#6e6e73]">{d.droneId}</span>
+            <span className="text-black">{d.droneId}</span>
           </div>
         ))}
       </div>
