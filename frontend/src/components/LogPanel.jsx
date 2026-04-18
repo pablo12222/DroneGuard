@@ -23,7 +23,7 @@ export default function LogPanel({ logs }) {
       <div className="flex items-center gap-2 px-4 py-3 border-b border-black/4 flex-shrink-0 bg-white">
         <Terminal size={13} className="text-black" />
         <span className="text-[10px] text-black uppercase tracking-widest font-mono">System Log</span>
-        <span className="ml-auto text-[10px] text-black font-mono bg-[#f5f5f7] px-2 py-0.5 rounded-full">
+        <span className="ml-auto text-[10px] text-black font-mono bg-[#f5f5f7] px-2 py-0.5 rounded-sm">
           {logs.length}
         </span>
       </div>
@@ -32,8 +32,8 @@ export default function LogPanel({ logs }) {
       <div className="flex-1 overflow-y-auto terminal-text p-2 space-y-1 bg-[#fafafa]">
         {logs.length === 0 && (
           <div className="flex flex-col items-center justify-center h-32 gap-2">
-            <Terminal size={20} className="text-[#d1d1d6]" />
-            <p className="text-xs text-[#c7c7cc] font-mono">Waiting for events...</p>
+            <Terminal size={20} className="text-black/20" />
+            <p className="text-xs text-black font-mono">Waiting for events...</p>
           </div>
         )}
 
@@ -42,21 +42,17 @@ export default function LogPanel({ logs }) {
           return (
             <div
               key={log.id}
-              className={`flex items-start gap-2 px-2.5 py-2 rounded-xl border text-xs ${cfg.bg} ${cfg.border}`}
+              className={`flex items-start gap-2 px-2.5 py-2 rounded-sm border text-xs ${cfg.bg} ${cfg.border}`}
             >
-              {/* Prefix icon */}
               <span className={`${cfg.prefixColor} flex-shrink-0 mt-px w-3 font-bold`}>
                 {cfg.prefix}
               </span>
-
               <div className="flex-1 min-w-0">
-                {/* Timestamp */}
                 {log.timestamp > 0 && (
                   <span className="text-black font-mono mr-1.5 text-[10px]">
                     T+{log.timestamp.toFixed(1)}s
                   </span>
                 )}
-                {/* Message */}
                 <span className={`${cfg.textColor} break-words leading-relaxed font-mono`}>
                   {log.message}
                 </span>
@@ -74,7 +70,7 @@ export default function LogPanel({ logs }) {
           {Object.entries(LEVEL_CONFIG).map(([level, cfg]) => (
             <div key={level} className="flex items-center gap-1">
               <span className={`text-xs ${cfg.prefixColor} font-bold`}>{cfg.prefix}</span>
-              <span className="text-[10px] text-[#aeaeb2] font-mono capitalize">{level}</span>
+              <span className="text-[10px] text-black font-mono capitalize">{level}</span>
             </div>
           ))}
         </div>

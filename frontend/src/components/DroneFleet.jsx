@@ -25,10 +25,10 @@ export default function DroneFleet({
           <button
             onClick={onTogglePlanningMode}
             title="Plan custom route"
-            className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-lg transition ${
+            className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-sm transition ${
               planningMode
                 ? 'bg-indigo-100 text-indigo-700'
-                : 'text-[#6e6e73] hover:bg-[#f5f5f7]'
+                : 'text-black hover:bg-[#f5f5f7]'
             }`}
           >
             <Route size={12} />
@@ -36,7 +36,7 @@ export default function DroneFleet({
           </button>
           <button
             onClick={onAdd}
-            className="flex items-center gap-1 text-xs font-medium text-[#E4007F] hover:bg-rose-50 px-2 py-1 rounded-lg transition"
+            className="flex items-center gap-1 text-xs font-medium text-[#E4007F] hover:bg-rose-50 px-2 py-1 rounded-sm transition"
           >
             <Plus size={12} />
             Add
@@ -46,7 +46,7 @@ export default function DroneFleet({
 
       {droneList.length === 0 ? (
         <div className="text-center py-5">
-          <p className="text-xs text-[#aeaeb2] mb-2">No active drones</p>
+          <p className="text-xs text-black mb-2">No active drones</p>
           <button onClick={onAdd} className="text-xs font-medium text-[#E4007F] hover:underline">
             Add your first drone →
           </button>
@@ -57,7 +57,7 @@ export default function DroneFleet({
             <div
               key={drone.instanceId}
               onClick={() => onSelect(drone.instanceId)}
-              className={`flex items-center gap-2.5 p-2.5 rounded-xl cursor-pointer transition-all border ${
+              className={`flex items-center gap-2.5 p-2.5 rounded-sm cursor-pointer transition-all border ${
                 drone.instanceId === activeDroneId
                   ? 'border-[#E4007F]/25 bg-[#E4007F]/5'
                   : 'border-transparent bg-[#f5f5f7] hover:border-black/8'
@@ -68,25 +68,25 @@ export default function DroneFleet({
                 style={drone.instanceId === activeDroneId ? { backgroundColor: drone.color } : {}}
               />
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-mono font-semibold text-[#1d1d1f] truncate">{drone.droneId}</p>
-                <p className="text-[10px] text-[#aeaeb2] truncate">
+                <p className="text-xs font-mono font-semibold text-black truncate">{drone.droneId}</p>
+                <p className="text-[10px] text-black truncate">
                   {drone.simulationPreset?.name || 'Custom route'}
                 </p>
               </div>
               {drone.status === 'running' && (
                 <div className="w-10 flex-shrink-0">
-                  <div className="h-1 bg-black/5 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-300"
+                  <div className="h-1 bg-black/5 rounded-sm overflow-hidden">
+                    <div className="h-full rounded-sm transition-all duration-300"
                       style={{ width: `${drone.progress}%`, backgroundColor: drone.color }} />
                   </div>
-                  <p className="text-[9px] font-mono text-[#aeaeb2] text-right mt-0.5">
+                  <p className="text-[9px] font-mono text-black text-right mt-0.5">
                     {drone.progress.toFixed(0)}%
                   </p>
                 </div>
               )}
               <button
                 onClick={e => { e.stopPropagation(); onRemove(drone.instanceId); }}
-                className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-lg hover:bg-rose-100 hover:text-rose-600 text-[#c7c7cc] transition"
+                className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-sm hover:bg-rose-100 hover:text-rose-600 text-black transition"
               >
                 <Trash2 size={11} />
               </button>
