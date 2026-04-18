@@ -437,7 +437,7 @@ export default function App() {
           </div>
           <div>
             <h1 className="text-sm font-semibold tracking-tight text-black leading-none">DroneGuard</h1>
-            <p className="text-[10px] text-black font-mono tracking-widest mt-0.5 uppercase">Energy Infrastructure Inspection</p>
+            <p className="text-[16px] text-black font-mono tracking-widest mt-0.5 uppercase">Energy Infrastructure Inspection</p>
           </div>
         </div>
         <div className="flex items-center gap-8">

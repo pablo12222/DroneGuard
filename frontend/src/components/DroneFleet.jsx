@@ -18,7 +18,7 @@ export default function DroneFleet({
   return (
     <div className="p-4 border-b border-black/5">
       <div className="flex items-center justify-between mb-3">
-        <p className="text-[10px] text-black uppercase tracking-widest font-mono">
+        <p className="text-[13px] text-black uppercase tracking-widest font-mono">
           Fleet ({droneList.length})
         </p>
         <div className="flex gap-1">
@@ -31,14 +31,14 @@ export default function DroneFleet({
                 : 'text-black hover:bg-[#f5f5f7]'
             }`}
           >
-            <Route size={12} />
+            <Route size={13} />
             {planningMode ? `${customWaypoints.length} pts` : 'Route'}
           </button>
           <button
             onClick={onAdd}
             className="flex items-center gap-1 text-xs font-medium text-[#E4007F] hover:bg-rose-50 px-2 py-1 rounded transition"
           >
-            <Plus size={12} />
+            <Plus size={13} />
             Add
           </button>
         </div>
