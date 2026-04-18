@@ -38,7 +38,36 @@ const Toast = forwardRef((_, ref) => {
   );
 });
 
+function haversineKm(a, b) {
+  const R = 6371;
+  const dLat = (b.lat - a.lat) * Math.PI / 180;
+  const dLng = (b.lng - a.lng) * Math.PI / 180;
+  const sinDLat = Math.sin(dLat / 2);
+  const sinDLng = Math.sin(dLng / 2);
+  const c = sinDLat * sinDLat + Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * sinDLng * sinDLng;
+  return R * 2 * Math.asin(Math.sqrt(c));
+}
+
+function routeSpeedKmS(routeData) {
+  const wps = routeData?.waypoints;
+  if (!wps || wps.length < 2 || !routeData.estimatedDuration) return 0.05; // fallback ~50 m/s
+  let total = 0;
+  for (let i = 1; i < wps.length; i++) total += haversineKm(wps[i - 1], wps[i]);
+  return total / routeData.estimatedDuration; // km/s
+}
+
+const SIMULATION_SPEED_KM_S = 0.11; // ~110 m/s — matches preset route pacing
+
 function buildCustomRouteData(waypoints) {
+  // Compute cumulative timestamps based on real distance at simulation speed
+  const timestamps = [0];
+  let totalKm = 0;
+  for (let i = 1; i < waypoints.length; i++) {
+    const segKm = haversineKm(waypoints[i - 1], waypoints[i]);
+    totalKm += segKm;
+    timestamps.push(totalKm / SIMULATION_SPEED_KM_S);
+  }
+
   return {
     id: `custom_${Date.now()}`,
     name: 'Custom Route',
@@ -47,12 +76,12 @@ function buildCustomRouteData(waypoints) {
       lat: wp.lat,
       lng: wp.lng,
       altitude: 80,
-      timestamp: i * 10,
+      timestamp: Math.round(timestamps[i]),
       name: `WP-${String(i + 1).padStart(3, '0')}`,
       type: 'waypoint',
     })),
-    estimatedDuration: (waypoints.length - 1) * 10,
-    totalDistance: 0,
+    estimatedDuration: Math.round(totalKm / SIMULATION_SPEED_KM_S),
+    totalDistance: Math.round(totalKm * 1000), // metres
     region: 'Custom',
     lineVoltage: 'N/A',
     operator: 'Manual',
@@ -130,12 +159,16 @@ export default function App() {
   handleSSEEventRef.current = (instanceId, event) => {
     switch (event.type) {
       case 'drone_position':
-        updateDrone(instanceId, {
-          dronePosition: { lat: event.lat, lng: event.lng, altitude: event.altitude, heading: event.heading },
-          progress: event.progress,
-          simulationTime: event.simulationTime,
-          anomalyCount: event.anomalyCount,
-          status: 'running',
+        updateDrone(instanceId, d => {
+          if (d.status === 'returning') return d;
+          return {
+            ...d,
+            dronePosition: { lat: event.lat, lng: event.lng, altitude: event.altitude, heading: event.heading },
+            progress: event.progress,
+            simulationTime: event.simulationTime,
+            anomalyCount: event.anomalyCount,
+            status: 'running',
+          };
         });
         break;
       case 'detection':
@@ -160,6 +193,24 @@ export default function App() {
         break;
       case 'inspection_complete':
         updateDrone(instanceId, { status: 'complete', progress: 100 });
+        // Animate return to start at simulation speed
+        setDrones(prev => {
+          const drone = prev.get(instanceId);
+          if (!drone) return prev;
+          const currentPos = drone.dronePosition;
+          const startWp = drone.routeData?.waypoints?.[0];
+          if (currentPos && startWp) {
+            const distKm = haversineKm(currentPos, startWp);
+            const speedKmS = routeSpeedKmS(drone.routeData);
+            const durationMs = (distKm / speedKmS) * 1000;
+            const next = new Map(prev);
+            next.set(instanceId, { ...drone, status: 'returning', progress: 100 });
+            animateReturnRef.current(instanceId, currentPos, { lat: startWp.lat, lng: startWp.lng }, durationMs)
+              .then(() => updateDrone(instanceId, { status: 'complete', dronePosition: null }));
+            return next;
+          }
+          return prev;
+        });
         break;
       case 'inspection_reset':
         updateDrone(instanceId, {
@@ -298,21 +349,56 @@ export default function App() {
     }
   }, [activeDrone, activeDroneId, updateDrone]);
 
+  const animateReturn = useCallback((instanceId, fromPos, toPos, durationMs) => {
+    return new Promise(resolve => {
+      const INTERVAL = 50;
+      const steps = Math.max(1, Math.round(durationMs / INTERVAL));
+      let step = 0;
+      const timer = setInterval(() => {
+        step++;
+        const t = step / steps;
+        const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+        const lat = fromPos.lat + (toPos.lat - fromPos.lat) * ease;
+        const lng = fromPos.lng + (toPos.lng - fromPos.lng) * ease;
+        updateDrone(instanceId, { dronePosition: { lat, lng, altitude: fromPos.altitude || 80, heading: 0 } });
+        if (step >= steps) {
+          clearInterval(timer);
+          resolve();
+        }
+      }, INTERVAL);
+    });
+  }, [updateDrone]);
+
+  const animateReturnRef = useRef(animateReturn);
+  animateReturnRef.current = animateReturn;
+
   const handleReset = useCallback(async () => {
     if (!activeDrone?.missionId) return;
+    const instanceId = activeDroneId;
+    const currentPos = activeDrone.dronePosition;
+    const startPos = activeDrone.routeData?.waypoints?.[0];
+
     try {
+      await api.post('/api/inspection/pause', { missionId: activeDrone.missionId }).catch(() => {});
+      if (currentPos && startPos) {
+        const distKm = haversineKm(currentPos, { lat: startPos.lat, lng: startPos.lng });
+        const speedKmS = routeSpeedKmS(activeDrone.routeData);
+        const durationMs = (distKm / speedKmS) * 1000;
+        updateDrone(instanceId, { status: 'returning' });
+        await animateReturn(instanceId, currentPos, { lat: startPos.lat, lng: startPos.lng }, durationMs);
+      }
       await api.post('/api/inspection/reset', { missionId: activeDrone.missionId });
-      updateDrone(activeDroneId, {
+      updateDrone(instanceId, {
         status: 'idle', progress: 0, dronePosition: null,
         detections: [], simulationTime: 0, anomalyCount: 0, logs: [],
       });
     } catch (err) {
-      updateDrone(activeDroneId, d => ({
+      updateDrone(instanceId, d => ({
         ...d,
         logs: [...d.logs, { id: Date.now(), level: 'error', message: `Reset failed: ${err.message}`, timestamp: 0 }],
       }));
     }
-  }, [activeDrone, activeDroneId, updateDrone]);
+  }, [activeDrone, activeDroneId, updateDrone, animateReturn]);
 
   const handleAddWaypoint = useCallback((lat, lng) => {
     setCustomWaypoints(prev => [...prev, { lat, lng }]);
@@ -340,10 +426,12 @@ export default function App() {
     idle: 'bg-gray-300', starting: 'bg-amber-400 animate-pulse',
     running: 'bg-emerald-500 animate-pulse', paused: 'bg-amber-400',
     complete: 'bg-blue-500', error: 'bg-red-500',
+    returning: 'bg-violet-500 animate-pulse',
   }[headerStatus] || 'bg-gray-300';
   const statusLabel = {
     idle: 'Standby', starting: 'Starting', running: 'Inspecting',
     paused: 'Paused', complete: 'Complete', error: 'Error',
+    returning: 'Returning',
   }[headerStatus] || 'Standby';
 
   return (

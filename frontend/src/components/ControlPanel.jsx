@@ -19,7 +19,8 @@ const STATUS_CONFIG = {
   running:  { color: 'text-emerald-700',bg: 'bg-emerald-50 border border-emerald-200', label: 'Inspecting' },
   paused:   { color: 'text-amber-700',  bg: 'bg-amber-50 border border-amber-200',     label: 'Paused' },
   complete: { color: 'text-blue-700',   bg: 'bg-blue-50 border border-blue-200',       label: 'Complete' },
-  error:    { color: 'text-red-700',    bg: 'bg-red-50 border border-red-200',         label: 'Error' },
+  error:     { color: 'text-red-700',    bg: 'bg-red-50 border border-red-200',         label: 'Error' },
+  returning: { color: 'text-violet-700', bg: 'bg-violet-50 border border-violet-200',   label: 'Returning' },
 };
 
 export default function ControlPanel({
