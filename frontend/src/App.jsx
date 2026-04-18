@@ -41,7 +41,7 @@ const Toast = forwardRef((_, ref) => {
 function buildCustomRouteData(waypoints) {
   return {
     id: `custom_${Date.now()}`,
-    name: 'Trasa Własna',
+    name: 'Custom Route',
     waypoints: waypoints.map((wp, i) => ({
       id: i,
       lat: wp.lat,
@@ -68,7 +68,7 @@ export default function App() {
   const [customWaypoints, setCustomWaypoints] = useState([]);
 
   const toastRef = useRef(null);
-  const eventSourcesRef = useRef(new Map()); // missionId -> EventSource
+  const eventSourcesRef = useRef(new Map());
   const handleSSEEventRef = useRef(null);
 
   const activeDrone = drones.get(activeDroneId) || null;

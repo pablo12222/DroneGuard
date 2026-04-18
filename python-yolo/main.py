@@ -43,17 +43,28 @@ app = FastAPI(title="DroneGuard YOLO Service", version="1.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 model = None
+device = "cpu"
+
+
+def resolve_device():
+    try:
+        import torch
+        return "cuda:0" if torch.cuda.is_available() else "cpu"
+    except Exception:
+        return "cpu"
 
 
 def load_model():
-    global model
+    global model, device
     if model is not None:
         return model
     try:
         from ultralytics import YOLO
+        device = resolve_device()
         if not MODEL_PATH.exists():
             raise FileNotFoundError(f"Model not found at {MODEL_PATH}")
         model = YOLO(str(MODEL_PATH))
+        model.to(device)
         print(f"✓ Model loaded from {MODEL_PATH}")
         return model
     except Exception as e:
@@ -94,6 +105,7 @@ def health():
         "model_loaded": model is not None,
         "model_path": str(MODEL_PATH),
         "model_exists": MODEL_PATH.exists(),
+        "device": device,
     }
 
 
@@ -123,6 +135,7 @@ def detect(req: DetectRequest):
         conf=req.confidence_threshold,
         iou=0.45,
         imgsz=800,
+        device=device,
         verbose=False,
     )
     detections = []
