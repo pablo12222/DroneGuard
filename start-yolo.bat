@@ -35,5 +35,5 @@ echo ====================================
 echo  YOLO Service: http://localhost:8000
 echo ====================================
 cd /d "%YOLO_DIR%"
-"%UVICORN%" main:app --host 0.0.0.0 --port 8000 --reload
+"%UVICORN%" main:app --host 0.0.0.0 --port 8000
 pause

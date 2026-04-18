@@ -55,6 +55,7 @@ export default function App() {
   const [videoPath, setVideoPath] = useState('');
   const [droneId, setDroneId] = useState('DRONE-01');
   const toastRef = useRef(null);
+  const yoloLogCooldownRef = useRef(new Map());
 
   const addLog = useCallback((level, message, ts) => {
     setLogs(prev => {
@@ -64,13 +65,34 @@ export default function App() {
   }, []);
 
   const handleYoloDetection = useCallback((dets, ts) => {
+    const now = Date.now();
+
     dets.forEach(d => {
+      const key = [
+        d.className,
+        d.severity,
+        Math.round((d.confidence || 0) * 20),
+        Math.round((d.bbox?.x || 0) / 48),
+        Math.round((d.bbox?.y || 0) / 48),
+      ].join('|');
+
+      const lastSeen = yoloLogCooldownRef.current.get(key) || 0;
+      if (now - lastSeen < 1500) return;
+
+      yoloLogCooldownRef.current.set(key, now);
       const level = d.isAnomaly ? 'warning' : 'info';
       addLog(level,
         `YOLO: ${d.className} — ${(d.confidence * 100).toFixed(0)}% conf · ${d.severity} severity`,
         parseFloat(ts.toFixed(1))
       );
     });
+
+    if (yoloLogCooldownRef.current.size > 300) {
+      const cutoff = now - 10000;
+      for (const [key, timestamp] of yoloLogCooldownRef.current.entries()) {
+        if (timestamp < cutoff) yoloLogCooldownRef.current.delete(key);
+      }
+    }
   }, [addLog]);
 
   useEffect(() => {

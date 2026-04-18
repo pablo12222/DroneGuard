@@ -2,6 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { Camera, Wifi, AlertTriangle, Navigation, Cpu } from 'lucide-react';
 
 const SEVERITY_COLOR = { high: '#ef4444', medium: '#eab308', low: '#3b82f6' };
+const ANALYSIS_FRAME_STRIDE = 3;
+const MIN_INFERENCE_INTERVAL_MS = 75;
+const HARD_SYNC_THRESHOLD = 1.5;
+const SOFT_SYNC_THRESHOLD = 0.2;
 
 export default function DroneView({
   videoPath, detections, simulationTime, dronePosition,
@@ -14,6 +18,7 @@ export default function DroneView({
   const fallbackTimerRef = useRef(null);
   const inferenceInFlightRef = useRef(false);
   const processedFrameRef = useRef(0);
+  const lastInferenceAtRef = useRef(0);
 
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [yoloDets, setYoloDets] = useState([]);
@@ -33,9 +38,27 @@ export default function DroneView({
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !videoLoaded) return;
-    if (Math.abs(video.currentTime - simulationTime) > 0.5) video.currentTime = simulationTime;
-    if (status === 'running' && video.paused)  video.play().catch(() => {});
-    if (status === 'paused'  && !video.paused) video.pause();
+
+    if (status === 'running') {
+      const drift = simulationTime - video.currentTime;
+
+      if (Math.abs(drift) > HARD_SYNC_THRESHOLD) {
+        video.currentTime = simulationTime;
+      } else if (Math.abs(drift) > SOFT_SYNC_THRESHOLD) {
+        video.playbackRate = drift > 0 ? 1.04 : 0.96;
+      } else if (video.playbackRate !== 1) {
+        video.playbackRate = 1;
+      }
+
+      if (video.paused) video.play().catch(() => {});
+      return;
+    }
+
+    if (video.playbackRate !== 1) video.playbackRate = 1;
+    if (status === 'paused' && !video.paused) video.pause();
+    if (status !== 'running' && Math.abs(video.currentTime - simulationTime) > 0.05) {
+      video.currentTime = simulationTime;
+    }
   }, [simulationTime, status, videoLoaded]);
 
   // Keep the overlay sized to the actual rendered video area.
@@ -95,11 +118,14 @@ export default function DroneView({
 
     let cancelled = false;
     processedFrameRef.current = 0;
+    lastInferenceAtRef.current = 0;
 
     const runInference = async () => {
       if (cancelled || inferenceInFlightRef.current || video.paused || video.ended || !video.videoWidth) return;
+      if (performance.now() - lastInferenceAtRef.current < MIN_INFERENCE_INTERVAL_MS) return;
 
       inferenceInFlightRef.current = true;
+      lastInferenceAtRef.current = performance.now();
       const oc = offscreen.current;
       oc.width = video.videoWidth;
       oc.height = video.videoHeight;
@@ -141,7 +167,7 @@ export default function DroneView({
       if (typeof video.requestVideoFrameCallback === 'function') {
         frameHandleRef.current = video.requestVideoFrameCallback(() => {
           processedFrameRef.current += 1;
-          if (processedFrameRef.current % 3 === 0) {
+          if (processedFrameRef.current % ANALYSIS_FRAME_STRIDE === 0) {
             void runInference();
           }
           scheduleNext();
