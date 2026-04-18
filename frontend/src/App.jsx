@@ -173,6 +173,28 @@ export default function App() {
 
   }, [updateDrone]);
 
+  const handleYoloAnomaly = useCallback((instanceId, anomaly) => {
+    setDrones(prev => {
+      const drone = prev.get(instanceId);
+      if (!drone) return prev;
+      const pos = drone.dronePosition;
+      if (!pos) return prev;
+      const next = new Map(prev);
+      next.set(instanceId, {
+        ...drone,
+        yoloAnomalies: [...(drone.yoloAnomalies || []), {
+          ...anomaly,
+          lat: pos.lat,
+          lng: pos.lng,
+          altitude: pos.altitude,
+          color: drone.color,
+          droneId: drone.droneId,
+        }],
+      });
+      return next;
+    });
+  }, []);
+
   handleSSEEventRef.current = (instanceId, event) => {
     switch (event.type) {
       case 'drone_position':
@@ -275,7 +297,7 @@ export default function App() {
     updateDrone(instanceId, { videoPath: path });
   }, [updateDrone]);
 
-  const handleAddDrone = useCallback(async (preset, droneId, videoPath = null, customRoute = null) => {
+  const handleAddDrone = useCallback((preset, droneId, videoPath = null, customRoute = null) => {
     const instanceId = `drone_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`;
     const colorIndex = [...drones.keys()].length % DRONE_COLORS.length;
     const color = DRONE_COLORS[colorIndex];
@@ -287,10 +309,11 @@ export default function App() {
       droneId: resolvedId,
       simulationPreset: preset,
       missionId: null,
-      status: 'starting',
+      status: 'ready',
       progress: 0,
       anomalyCount: 0,
       detections: [],
+      yoloAnomalies: [],
       aiLiveDetections: [],
       aiTotalDetections: 0,
       aiTotalAnomalies: 0,
@@ -301,6 +324,7 @@ export default function App() {
       routeData,
       color,
       videoPath: videoPath || '',
+      _startConfig: { preset, droneId: resolvedId, videoPath, customRoute, routeData },
     };
 
     setDrones(prev => new Map([...prev, [instanceId, newDrone]]));
@@ -308,14 +332,20 @@ export default function App() {
 
     if (!customRoute && preset?.routeId) {
       api.get(`/api/routes/${preset.routeId}`)
-        .then(rd => updateDrone(instanceId, { routeData: rd }))
+        .then(rd => updateDrone(instanceId, { routeData: rd, _startConfig: { ...newDrone._startConfig } }))
         .catch(() => {});
     }
+  }, [drones, updateDrone]);
 
+  const handleStartDrone = useCallback(async (instanceId) => {
+    const drone = drones.get(instanceId);
+    if (!drone || !drone._startConfig) return;
+    const { preset, droneId, videoPath, customRoute, routeData } = drone._startConfig;
+    updateDrone(instanceId, { status: 'starting' });
     try {
       const body = {
         name: `${preset?.name || 'Custom'} — ${new Date().toLocaleTimeString()}`,
-        droneId: resolvedId,
+        droneId,
         videoPath: videoPath || undefined,
       };
       if (customRoute) {
@@ -323,7 +353,6 @@ export default function App() {
       } else {
         body.routeId = preset.routeId;
       }
-
       const data = await api.post('/api/inspection/start', body);
       updateDrone(instanceId, { missionId: data.missionId, status: 'running', weather: data.weather || null });
       connectDroneSSE(data.missionId, instanceId);
@@ -430,40 +459,14 @@ export default function App() {
 
   const handleRestart = useCallback(async () => {
     if (!activeDrone) return;
-    const { instanceId, simulationPreset, routeData, droneId, videoPath } = activeDrone;
-    updateDrone(instanceId, {
-      status: 'starting',
-      progress: 0,
-      detections: [],
-      aiLiveDetections: [],
-      aiTotalDetections: 0,
-      aiTotalAnomalies: 0,
-      simulationTime: 0,
-      anomalyCount: 0,
-      logs: [],
+    updateDrone(activeDrone.instanceId, {
+      progress: 0, detections: [], yoloAnomalies: [],
+      aiLiveDetections: [], aiTotalDetections: 0, aiTotalAnomalies: 0,
+      simulationTime: 0, anomalyCount: 0, logs: [],
+      _startConfig: activeDrone._startConfig,
     });
-    try {
-      const body = {
-        name: `${simulationPreset?.name || 'Custom'} — ${new Date().toLocaleTimeString()}`,
-        droneId,
-        videoPath: videoPath || undefined,
-      };
-      if (simulationPreset?.id === 'custom') {
-        body.routeData = routeData;
-      } else {
-        body.routeId = simulationPreset.routeId;
-      }
-      const data = await api.post('/api/inspection/start', body);
-      updateDrone(instanceId, { missionId: data.missionId, status: 'running', weather: data.weather || null });
-      connectDroneSSE(data.missionId, instanceId);
-    } catch (err) {
-      updateDrone(instanceId, d => ({
-        ...d,
-        status: 'error',
-        logs: [...d.logs, { id: Date.now(), level: 'error', message: `Restart failed: ${err.message}`, timestamp: 0 }],
-      }));
-    }
-  }, [activeDrone, updateDrone, connectDroneSSE]);
+    await handleStartDrone(activeDrone.instanceId);
+  }, [activeDrone, updateDrone, handleStartDrone]);
 
   const handleAddWaypoint = useCallback((lat, lng) => {
     setCustomWaypoints(prev => [...prev, { lat, lng }]);
@@ -485,17 +488,20 @@ export default function App() {
     .filter(d => d.instanceId !== activeDroneId)
     .map(d => ({ instanceId: d.instanceId, droneId: d.droneId, dronePosition: d.dronePosition, color: d.color, routeData: d.routeData, progress: d.progress }));
 
+  const allYoloAnomalies = [...drones.values()].flatMap(d => d.yoloAnomalies || []);
+
   const headerStatus = activeDrone?.status || 'idle';
   const statusDot = {
     idle: 'bg-gray-300', starting: 'bg-amber-400 animate-pulse',
     running: 'bg-emerald-500 animate-pulse', paused: 'bg-amber-400',
     complete: 'bg-blue-500', error: 'bg-red-500',
     returning: 'bg-violet-500 animate-pulse',
+    ready: 'bg-emerald-400',
   }[headerStatus] || 'bg-gray-300';
   const statusLabel = {
     idle: 'Standby', starting: 'Starting', running: 'Inspecting',
     paused: 'Paused', complete: 'Complete', error: 'Error',
-    returning: 'Returning',
+    returning: 'Returning', ready: 'Ready',
   }[headerStatus] || 'Standby';
 
   return (
@@ -537,6 +543,7 @@ export default function App() {
           onSelectDrone={setActiveDroneId}
           onAddDrone={() => setShowAddModal(true)}
           onRemoveDrone={handleRemoveDrone}
+          onStartDrone={handleStartDrone}
           onPause={handlePause}
           onReset={handleReset}
           onRestart={handleRestart}
@@ -556,6 +563,7 @@ export default function App() {
               progress={activeDrone?.progress || 0}
               activeColor={activeDrone?.color || '#E4007F'}
               otherDrones={otherDrones}
+              yoloAnomalies={allYoloAnomalies}
               planningMode={planningMode}
               customWaypoints={customWaypoints}
               onAddWaypoint={handleAddWaypoint}
@@ -572,6 +580,9 @@ export default function App() {
               status={activeDrone?.status || 'idle'}
               onYoloDetection={(dets, ts, stats) => {
                 if (activeDrone?.instanceId) handleYoloDetection(activeDrone.instanceId, dets, ts, stats);
+              }}
+              onYoloAnomaly={(anomaly) => {
+                if (activeDrone?.instanceId) handleYoloAnomaly(activeDrone.instanceId, anomaly);
               }}
             />
           )}

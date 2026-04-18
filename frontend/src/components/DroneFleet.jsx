@@ -1,12 +1,14 @@
 import { Plus, Trash2, Route } from 'lucide-react';
 
 const STATUS_DOT = {
-  idle:     'bg-gray-300',
-  starting: 'bg-amber-400 animate-pulse',
-  running:  'bg-emerald-500 animate-pulse',
-  paused:   'bg-amber-400',
-  complete: 'bg-blue-500',
-  error:    'bg-red-500',
+  idle:      'bg-gray-300',
+  ready:     'bg-emerald-400',
+  starting:  'bg-amber-400 animate-pulse',
+  running:   'bg-emerald-500 animate-pulse',
+  paused:    'bg-amber-400',
+  complete:  'bg-blue-500',
+  returning: 'bg-violet-500 animate-pulse',
+  error:     'bg-red-500',
 };
 
 export default function DroneFleet({

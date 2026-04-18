@@ -5,7 +5,7 @@ const { v4: uuidv4 } = require('uuid');
 const router = express.Router();
 
 const simulation = require('../services/simulationService');
-const { loadDetections } = require('../services/detectionService');
+const { generateDetections } = require('../services/detectionService');
 const { getWeather } = require('../services/weatherService');
 
 const ROUTES_DIR = path.join(__dirname, '..', '..', 'data', 'routes');
@@ -59,7 +59,7 @@ router.post('/start', async (req, res) => {
     if (!route) return res.status(404).json({ error: 'Route not found' });
 
     const missionId = reqMissionId || uuidv4();
-    const detections = loadDetections(missionId);
+    const detections = generateDetections(route, videoPath || null);
 
     // Fetch weather for start position
     const firstWp = route.waypoints[0];

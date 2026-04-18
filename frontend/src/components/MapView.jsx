@@ -63,7 +63,7 @@ const MAP_STYLES = [
 
 export default function MapView({
   routeData, dronePosition, detections, progress,
-  otherDrones = [],
+  otherDrones = [], yoloAnomalies = [],
   planningMode = false, customWaypoints = [], onAddWaypoint,
   activeColor = '#E4007F',
 }) {
@@ -77,6 +77,7 @@ export default function MapView({
   const tileLayer         = useRef(null);
   const secondaryRefs     = useRef({});
   const secondaryRoutes   = useRef({}); // instanceId → { routeLine, visitedLine }
+  const yoloAnomalyMarkers = useRef({});  // anomaly.id → L.marker
   const planWaypoints     = useRef([]);
   const planLine          = useRef(null);
   const onAddWaypointRef  = useRef(onAddWaypoint);
@@ -269,6 +270,30 @@ export default function MapView({
     }
   }, [detections.length]);
 
+  useEffect(() => {
+    const map = mapInstance.current;
+    if (!map) return;
+    yoloAnomalies.forEach(anomaly => {
+      if (yoloAnomalyMarkers.current[anomaly.id]) return;
+      if (!anomaly.lat || !anomaly.lng) return;
+      const sev = anomaly.severity === 'high' ? '#ef4444' : anomaly.severity === 'medium' ? '#f59e0b' : '#3b82f6';
+      const camSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
+        <circle cx="18" cy="18" r="17" fill="${sev}" fill-opacity="0.15" stroke="${sev}" stroke-width="2"/>
+        <circle cx="18" cy="18" r="8" fill="${sev}"/>
+        <circle cx="18" cy="18" r="4" fill="white"/>
+        <rect x="10" y="13" width="16" height="11" rx="2" fill="none" stroke="${sev}" stroke-width="1.5"/>
+        <path d="M26 15.5l4-2v9l-4-2z" fill="${sev}"/>
+      </svg>`;
+      const marker = L.marker([anomaly.lat, anomaly.lng], {
+        icon: makeIcon(camSvg, [36, 36], [18, 18]),
+        zIndexOffset: 1200,
+      })
+        .bindPopup(popupYoloAnomaly(anomaly, sev), { maxWidth: 260, className: 'clean-popup' })
+        .addTo(map);
+      yoloAnomalyMarkers.current[anomaly.id] = marker;
+    });
+  }, [yoloAnomalies]);
+
   return (
     <div className="relative w-full h-full">
       <div ref={mapRef} className="w-full h-full" />
@@ -287,6 +312,7 @@ export default function MapView({
         <LegendRow color="bg-slate-300"  label="Planned route" dashed />
         <LegendRow color="bg-indigo-400" label="Power tower" dot />
         <LegendRow color="bg-rose-500"   label="Anomaly" dot />
+        {yoloAnomalies.length > 0 && <LegendRow color="bg-rose-600" label={`YOLO (${yoloAnomalies.length})`} dot />}
         {otherDrones.filter(d => d.routeData).map(d => (
           <div key={d.instanceId} className="flex items-center gap-2">
             <span className="w-5 h-0.5 rounded-sm flex-shrink-0" style={{ backgroundColor: d.color }} />
@@ -353,6 +379,23 @@ function popupTower(wp, i) {
     <span style="color:#111">Lat: ${wp.lat.toFixed(5)}</span><br/>
     <span style="color:#111">Lng: ${wp.lng.toFixed(5)}</span><br/>
     <span style="color:#111">Alt: ${wp.altitude}m</span>
+  </div>`;
+}
+
+function popupYoloAnomaly(a, sev) {
+  const img = a.imageDataUrl
+    ? `<img src="${a.imageDataUrl}" style="width:100%;border-radius:4px;margin-bottom:8px;display:block"/>`
+    : '';
+  return `<div style="background:#fff;color:#1d1d1f;padding:12px;border-radius:4px;font-family:monospace;font-size:12px;min-width:230px;border:1px solid #fecaca;box-shadow:0 4px 16px rgba(239,68,68,0.12)">
+    ${img}
+    <b style="color:${sev};font-size:13px">⚠ YOLO: ${a.className.toUpperCase()}</b><br/>
+    <span style="color:#6e6e73;font-size:11px">Drone: ${a.droneId}</span><br/><br/>
+    <span style="color:#aeaeb2">Severity: </span><b style="color:${sev}">${(a.severity || '').toUpperCase()}</b><br/>
+    <span style="color:#aeaeb2">Confidence: </span><b>${(a.confidence * 100).toFixed(1)}%</b><br/>
+    <span style="color:#aeaeb2">Lat: </span><b>${a.lat?.toFixed(6)}</b><br/>
+    <span style="color:#aeaeb2">Lng: </span><b>${a.lng?.toFixed(6)}</b><br/>
+    <span style="color:#aeaeb2">Alt: </span><b>${a.altitude?.toFixed(0) ?? '--'} m</b><br/>
+    <span style="color:#aeaeb2">T+${a.timestamp?.toFixed(1)}s</span>
   </div>`;
 }
 

@@ -78,11 +78,13 @@ function canvasToBase64(canvas, quality) {
 
 export default function DroneView({
   videoPath, detections, simulationTime, dronePosition,
-  progress, anomalyCount, droneId, status, onYoloDetection,
+  progress, anomalyCount, droneId, status, onYoloDetection, onYoloAnomaly,
 }) {
   const containerRef = useRef(null);
   const videoRef = useRef(null);
   const offscreen = useRef(typeof document !== 'undefined' ? document.createElement('canvas') : null);
+  const onYoloAnomalyRef = useRef(onYoloAnomaly);
+  useEffect(() => { onYoloAnomalyRef.current = onYoloAnomaly; }, [onYoloAnomaly]);
   const frameHandleRef = useRef(null);
   const fallbackTimerRef = useRef(null);
   const inferenceInFlightRef = useRef(false);
@@ -247,6 +249,17 @@ export default function DroneView({
           if (!matchedTrack.anomalyCounted && matchedTrack.anomalyHits >= MIN_ANOMALY_HITS_TO_COUNT) {
             matchedTrack.anomalyCounted = true;
             totalAnomaliesRef.current += 1;
+            try {
+              const imageDataUrl = oc.toDataURL('image/jpeg', 0.75);
+              onYoloAnomalyRef.current?.({
+                id: `yolo_${Date.now()}_${matchedTrack.id}`,
+                className: det.assetName || det.className,
+                confidence: det.confidence ?? 0,
+                severity: det.severity || 'high',
+                timestamp: frameTime,
+                imageDataUrl,
+              });
+            } catch {}
           }
         });
         setYoloDets(nextDetections);

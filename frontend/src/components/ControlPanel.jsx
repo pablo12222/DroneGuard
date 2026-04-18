@@ -21,13 +21,14 @@ const STATUS_CONFIG = {
   complete: { color: 'text-blue-700',   bg: 'bg-blue-50 border border-blue-200',       label: 'Complete' },
   error:     { color: 'text-red-700',    bg: 'bg-red-50 border border-red-200',         label: 'Error' },
   returning: { color: 'text-violet-700', bg: 'bg-violet-50 border border-violet-200',   label: 'Returning' },
+  ready:     { color: 'text-emerald-700', bg: 'bg-emerald-50 border border-emerald-200', label: 'Ready' },
 };
 
 export default function ControlPanel({
   drone, drones, activeDroneId, activeView,
   planningMode, customWaypoints,
   onSelectDrone, onAddDrone, onRemoveDrone,
-  onPause, onReset, onRestart, onViewChange,
+  onStartDrone, onPause, onReset, onRestart, onViewChange,
   onTogglePlanningMode, onAddDroneWithRoute, onClearCustomRoute,
   onSetVideoPath,
 }) {
@@ -49,8 +50,9 @@ export default function ControlPanel({
 
   const sc = STATUS_CONFIG[status] || STATUS_CONFIG.idle;
   const isRunning = status === 'running';
+  const isReady   = status === 'ready';
   const canPause  = status === 'running' || status === 'paused';
-  const canReset  = status !== 'idle' && status !== 'starting';
+  const canReset  = status !== 'idle' && status !== 'starting' && status !== 'ready';
 
   const highSev = useLiveVideoMetrics ? 0 : detections.filter(d => d.severity === 'high').length;
   const medSev  = useLiveVideoMetrics ? 0 : detections.filter(d => d.severity === 'medium').length;
@@ -115,9 +117,9 @@ export default function ControlPanel({
                 placeholder={`DRONE-${String(drones.size + 1).padStart(2, '0')}`}
                 className="w-full bg-white border border-indigo-200 rounded-sm px-3 py-2 text-sm font-mono text-black focus:outline-none focus:border-indigo-500 transition" />
               <button onClick={handleLaunchCustomRoute}
-                className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold py-2 rounded-sm transition">
-                <CheckCheck size={13} />
-                Launch with this route
+                className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold py-3 rounded-sm transition shadow-md shadow-emerald-600/20 active:scale-[0.98]">
+                <Play size={14} />
+                Start Mission
               </button>
             </div>
           )}
@@ -222,7 +224,13 @@ export default function ControlPanel({
           {/* Controls */}
           <div className="p-4 space-y-2 border-b border-black/5">
             <p className="text-[10px] text-black uppercase tracking-widest font-mono mb-3">Controls</p>
-            {status === 'idle' && drone?.simulationPreset ? (
+            {isReady ? (
+              <button onClick={() => onStartDrone?.(drone.instanceId)}
+                className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold py-3 rounded-sm transition-all duration-150 active:scale-[0.98] shadow-md shadow-emerald-600/20">
+                <Play size={15} />
+                Start Mission
+              </button>
+            ) : status === 'idle' && drone?.simulationPreset ? (
               <button onClick={onRestart}
                 className="w-full flex items-center justify-center gap-2 bg-[#E4007F] hover:bg-[#c8006f] text-white text-sm font-semibold py-2.5 rounded-sm transition-all duration-150 active:scale-[0.98] shadow-md shadow-[#E4007F]/20">
                 <Play size={14} />
