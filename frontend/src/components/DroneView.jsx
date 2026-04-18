@@ -2,10 +2,35 @@ import { useEffect, useRef, useState } from 'react';
 import { Camera, Wifi, AlertTriangle, Navigation, Cpu } from 'lucide-react';
 
 const SEVERITY_COLOR = { high: '#ef4444', medium: '#eab308', low: '#3b82f6' };
-const ANALYSIS_FRAME_STRIDE = 3;
-const MIN_INFERENCE_INTERVAL_MS = 75;
-const HARD_SYNC_THRESHOLD = 1.5;
-const SOFT_SYNC_THRESHOLD = 0.2;
+const ANALYSIS_FRAME_STRIDE = 5;
+const MIN_INFERENCE_INTERVAL_MS = 140;
+const HARD_SYNC_THRESHOLD = 3;
+const SOFT_SYNC_THRESHOLD = 0.45;
+const JPEG_QUALITY = 0.8;
+const YOLO_DETECTION_HOLD_MS = 900;
+
+function canvasToBase64(canvas, quality) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        reject(new Error('Failed to encode canvas'));
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result;
+        if (typeof result !== 'string') {
+          reject(new Error('Failed to read encoded frame'));
+          return;
+        }
+        resolve(result.split(',')[1]);
+      };
+      reader.onerror = () => reject(new Error('Failed to read blob'));
+      reader.readAsDataURL(blob);
+    }, 'image/jpeg', quality);
+  });
+}
 
 export default function DroneView({
   videoPath, detections, simulationTime, dronePosition,
@@ -19,12 +44,18 @@ export default function DroneView({
   const inferenceInFlightRef = useRef(false);
   const processedFrameRef = useRef(0);
   const lastInferenceAtRef = useRef(0);
+  const lastPositiveDetectionAtRef = useRef(0);
+  const onYoloDetectionRef = useRef(onYoloDetection);
 
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [yoloDets, setYoloDets] = useState([]);
   const [yoloOnline, setYoloOnline] = useState(false);
   const [inferMs, setInferMs] = useState(null);
   const [overlayBox, setOverlayBox] = useState(null);
+
+  useEffect(() => {
+    onYoloDetectionRef.current = onYoloDetection;
+  }, [onYoloDetection]);
 
   // Mock detections (only shown when YOLO is offline or no video)
   const mockDets = detections.filter(d =>
@@ -45,7 +76,7 @@ export default function DroneView({
       if (Math.abs(drift) > HARD_SYNC_THRESHOLD) {
         video.currentTime = simulationTime;
       } else if (Math.abs(drift) > SOFT_SYNC_THRESHOLD) {
-        video.playbackRate = drift > 0 ? 1.04 : 0.96;
+        video.playbackRate = drift > 0 ? 1.015 : 0.985;
       } else if (video.playbackRate !== 1) {
         video.playbackRate = 1;
       }
@@ -119,6 +150,7 @@ export default function DroneView({
     let cancelled = false;
     processedFrameRef.current = 0;
     lastInferenceAtRef.current = 0;
+    lastPositiveDetectionAtRef.current = 0;
 
     const runInference = async () => {
       if (cancelled || inferenceInFlightRef.current || video.paused || video.ended || !video.videoWidth) return;
@@ -126,32 +158,43 @@ export default function DroneView({
 
       inferenceInFlightRef.current = true;
       lastInferenceAtRef.current = performance.now();
+      const frameTimestamp = video.currentTime;
       const oc = offscreen.current;
       oc.width = video.videoWidth;
       oc.height = video.videoHeight;
-      oc.getContext('2d').drawImage(video, 0, 0);
+      oc.getContext('2d').drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
       const t0 = performance.now();
 
       try {
-        const base64 = oc.toDataURL('image/jpeg', 0.8).split(',')[1];
+        const base64 = await canvasToBase64(oc, JPEG_QUALITY);
         const res = await fetch('http://localhost:8000/detect', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             image_base64: base64,
-            timestamp: video.currentTime,
+            timestamp: frameTimestamp,
             confidence_threshold: 0.20,
           }),
         });
         if (!res.ok) return;
         const data = await res.json();
-
         setYoloOnline(true);
         setInferMs(Math.round(performance.now() - t0));
-        setYoloDets(data.detections || []);
 
-        if (data.detections?.length > 0) {
-          onYoloDetection?.(data.detections, video.currentTime);
+        if (cancelled || status !== 'running' || video.paused) {
+          return;
+        }
+
+        const detections = data.detections || [];
+        if (detections.length > 0) {
+          lastPositiveDetectionAtRef.current = performance.now();
+          setYoloDets(detections);
+        } else if (performance.now() - lastPositiveDetectionAtRef.current > YOLO_DETECTION_HOLD_MS) {
+          setYoloDets([]);
+        }
+
+        if (detections.length > 0) {
+          onYoloDetectionRef.current?.(detections, frameTimestamp);
         }
       } catch {
         setYoloOnline(false);
@@ -191,7 +234,7 @@ export default function DroneView({
       clearTimeout(fallbackTimerRef.current);
       inferenceInFlightRef.current = false;
     };
-  }, [videoLoaded, status, onYoloDetection]);
+  }, [videoLoaded, status]);
 
   const videoUrl = videoPath
     ? (videoPath.startsWith('http') ? videoPath : `/videos/${encodeURI(videoPath)}`)

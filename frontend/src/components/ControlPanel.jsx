@@ -4,6 +4,15 @@ import DroneFleet from './DroneFleet';
 
 const BASE = 'http://localhost:3001';
 
+async function findExistingVideoFilename(filename) {
+  const res = await fetch(`${BASE}/api/videos`);
+  if (!res.ok) return null;
+
+  const files = await res.json();
+  const match = files.find((item) => item.filename?.toLowerCase() === filename.toLowerCase());
+  return match?.filename || null;
+}
+
 const STATUS_CONFIG = {
   idle:     { color: 'text-[#6e6e73]',  bg: 'bg-gray-100',                             label: 'Standby' },
   starting: { color: 'text-amber-700',  bg: 'bg-amber-50 border border-amber-200',     label: 'Starting' },
@@ -51,6 +60,12 @@ export default function ControlPanel({
     if (!file) return;
     setUploadingVideo(true);
     try {
+      const existingFilename = await findExistingVideoFilename(file.name);
+      if (existingFilename) {
+        onSetVideoPath?.(drone.instanceId, existingFilename);
+        return;
+      }
+
       const res = await fetch(`${BASE}/api/videos/upload`, {
         method: 'POST',
         headers: { 'X-Filename': file.name, 'Content-Type': file.type || 'video/mp4' },

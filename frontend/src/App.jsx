@@ -70,6 +70,7 @@ export default function App() {
   const toastRef = useRef(null);
   const eventSourcesRef = useRef(new Map());
   const handleSSEEventRef = useRef(null);
+  const yoloLogCooldownRef = useRef(new Map());
 
   const activeDrone = drones.get(activeDroneId) || null;
 
@@ -82,6 +83,48 @@ export default function App() {
       return next;
     });
   }, []);
+
+  const handleYoloDetection = useCallback((instanceId, dets, ts) => {
+    const now = Date.now();
+
+    updateDrone(instanceId, d => {
+      const nextLogs = [...d.logs];
+
+      dets.forEach(det => {
+        const key = [
+          instanceId,
+          det.className,
+          det.severity,
+          Math.round((det.confidence || 0) * 20),
+          Math.round((det.bbox?.x || 0) / 48),
+          Math.round((det.bbox?.y || 0) / 48),
+        ].join('|');
+
+        const lastSeen = yoloLogCooldownRef.current.get(key) || 0;
+        if (now - lastSeen < 1500) return;
+
+        yoloLogCooldownRef.current.set(key, now);
+        nextLogs.push({
+          id: Date.now() + Math.random(),
+          level: det.isAnomaly ? 'warning' : 'info',
+          message: `YOLO: ${det.className} â€” ${(det.confidence * 100).toFixed(0)}% conf Â· ${det.severity} severity`,
+          timestamp: parseFloat(ts.toFixed(1)),
+        });
+      });
+
+      return {
+        ...d,
+        logs: nextLogs.slice(-200),
+      };
+    });
+
+    if (yoloLogCooldownRef.current.size > 300) {
+      const cutoff = now - 10000;
+      for (const [key, timestamp] of yoloLogCooldownRef.current.entries()) {
+        if (timestamp < cutoff) yoloLogCooldownRef.current.delete(key);
+      }
+    }
+  }, [updateDrone]);
 
   // SSE handler kept fresh via ref to avoid stale closures
   handleSSEEventRef.current = (instanceId, event) => {
@@ -200,6 +243,7 @@ export default function App() {
       const body = {
         name: `${preset?.name || 'Custom'} — ${new Date().toLocaleTimeString()}`,
         droneId: resolvedId,
+        videoPath: videoPath || undefined,
       };
       if (customRoute) {
         body.routeData = routeData;
@@ -373,7 +417,9 @@ export default function App() {
               anomalyCount={activeDrone?.anomalyCount || 0}
               droneId={activeDrone?.droneId || '—'}
               status={activeDrone?.status || 'idle'}
-              onYoloDetection={() => {}}
+              onYoloDetection={(dets, ts) => {
+                if (activeDrone?.instanceId) handleYoloDetection(activeDrone.instanceId, dets, ts);
+              }}
             />
           )}
         </main>
