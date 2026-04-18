@@ -117,9 +117,9 @@ export default function ControlPanel({
                 placeholder={`DRONE-${String(drones.size + 1).padStart(2, '0')}`}
                 className="w-full bg-white border border-indigo-200 rounded-sm px-3 py-2 text-sm font-mono text-black focus:outline-none focus:border-indigo-500 transition" />
               <button onClick={handleLaunchCustomRoute}
-                className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold py-3 rounded-sm transition shadow-md shadow-emerald-600/20 active:scale-[0.98]">
+                className="w-full flex items-center justify-center gap-2 bg-[#E4007F] hover:bg-[#c8006f] text-white text-sm font-bold py-3 rounded-sm transition shadow-md shadow-[#E4007F]/30 active:scale-[0.98]">
                 <Play size={14} />
-                Start Mission
+                Start
               </button>
             </div>
           )}
@@ -226,9 +226,9 @@ export default function ControlPanel({
             <p className="text-[10px] text-black uppercase tracking-widest font-mono mb-3">Controls</p>
             {isReady ? (
               <button onClick={() => onStartDrone?.(drone.instanceId)}
-                className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold py-3 rounded-sm transition-all duration-150 active:scale-[0.98] shadow-md shadow-emerald-600/20">
+                className="w-full flex items-center justify-center gap-2 bg-[#E4007F] hover:bg-[#c8006f] text-white text-sm font-bold py-3 rounded-sm transition-all duration-150 active:scale-[0.98] shadow-md shadow-[#E4007F]/30">
                 <Play size={15} />
-                Start Mission
+                Start
               </button>
             ) : status === 'idle' && drone?.simulationPreset ? (
               <button onClick={onRestart}

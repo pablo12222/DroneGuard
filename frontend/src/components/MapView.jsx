@@ -67,6 +67,7 @@ export default function MapView({
   planningMode = false, customWaypoints = [], onAddWaypoint,
   activeColor = '#E4007F',
 }) {
+  const [modalAnomaly, setModalAnomaly] = useState(null);
   const mapRef            = useRef(null);
   const mapInstance       = useRef(null);
   const droneMarker       = useRef(null);
@@ -294,6 +295,14 @@ export default function MapView({
     });
   }, [yoloAnomalies]);
 
+  useEffect(() => {
+    window.__openAnomalyModal = (id) => {
+      const found = yoloAnomalies.find(a => a.id === id);
+      if (found) setModalAnomaly(found);
+    };
+    return () => { delete window.__openAnomalyModal; };
+  }, [yoloAnomalies]);
+
   return (
     <div className="relative w-full h-full">
       <div ref={mapRef} className="w-full h-full" />
@@ -349,6 +358,83 @@ export default function MapView({
           </div>
         </div>
       )}
+
+      {/* YOLO anomaly detail modal */}
+      {modalAnomaly && (
+        <div
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[9999] flex items-center justify-center p-6"
+          onClick={() => setModalAnomaly(null)}
+        >
+          <div
+            className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header bar — magenta accent */}
+            <div className="relative">
+              <div className="absolute inset-x-0 top-0 h-1 bg-[#E4007F]" />
+              <div className="flex items-center justify-between px-7 pt-6 pb-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-[#E4007F]/10 flex items-center justify-center flex-shrink-0">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E4007F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                      <circle cx="12" cy="13" r="4"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-[#E4007F] uppercase tracking-widest font-mono font-semibold">YOLO AI Detection</p>
+                    <h2 className="text-lg font-semibold text-[#1d1d1f] capitalize">{modalAnomaly.className}</h2>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setModalAnomaly(null)}
+                  className="w-9 h-9 flex items-center justify-center rounded-2xl hover:bg-[#f5f5f7] text-[#6e6e73] hover:text-[#1d1d1f] transition text-xl leading-none"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            {/* Image */}
+            {modalAnomaly.imageDataUrl && (
+              <div className="mx-7 mb-5 rounded-2xl overflow-hidden border border-black/6 shadow-inner bg-black">
+                <img
+                  src={modalAnomaly.imageDataUrl}
+                  alt="Detection frame"
+                  className="w-full max-h-[420px] object-contain"
+                />
+              </div>
+            )}
+
+            {/* Severity badge */}
+            <div className="px-7 mb-4">
+              {(() => {
+                const sev = modalAnomaly.severity;
+                const cfg = sev === 'high'
+                  ? { bg: 'bg-red-50 border-red-200', dot: 'bg-red-500', text: 'text-red-700', label: 'HIGH SEVERITY' }
+                  : sev === 'medium'
+                  ? { bg: 'bg-amber-50 border-amber-200', dot: 'bg-amber-400', text: 'text-amber-700', label: 'MEDIUM SEVERITY' }
+                  : { bg: 'bg-blue-50 border-blue-200', dot: 'bg-blue-400', text: 'text-blue-700', label: 'LOW SEVERITY' };
+                return (
+                  <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-mono font-semibold ${cfg.bg} ${cfg.text}`}>
+                    <span className={`w-2 h-2 rounded-full ${cfg.dot}`} />
+                    {cfg.label}
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Info grid */}
+            <div className="px-7 pb-7 grid grid-cols-3 gap-4">
+              <InfoRow label="Confidence"  value={`${(modalAnomaly.confidence * 100).toFixed(1)}%`} accent />
+              <InfoRow label="Altitude"    value={`${modalAnomaly.altitude?.toFixed(0) ?? '--'} m`} />
+              <InfoRow label="Timestamp"   value={`T+${modalAnomaly.timestamp?.toFixed(1)}s`} />
+              <InfoRow label="Latitude"    value={modalAnomaly.lat?.toFixed(6)} />
+              <InfoRow label="Longitude"   value={modalAnomaly.lng?.toFixed(6)} />
+              <InfoRow label="Drone"       value={modalAnomaly.droneId} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -360,6 +446,15 @@ function LegendRow({ color, label, line, dashed, dot }) {
       {line   && <span className={`w-5 h-0.5 rounded-sm ${color} flex-shrink-0`} />}
       {dashed && <span className="w-5 flex-shrink-0 border-t-2 border-dashed border-slate-300" />}
       <span className="text-black">{label}</span>
+    </div>
+  );
+}
+
+function InfoRow({ label, value, accent = false }) {
+  return (
+    <div className="bg-[#f5f5f7] rounded-2xl px-4 py-3">
+      <p className="text-[10px] text-[#aeaeb2] uppercase tracking-widest font-mono mb-1">{label}</p>
+      <p className={`text-sm font-mono font-semibold ${accent ? 'text-[#E4007F]' : 'text-[#1d1d1f]'}`}>{value ?? '—'}</p>
     </div>
   );
 }
@@ -384,7 +479,7 @@ function popupTower(wp, i) {
 
 function popupYoloAnomaly(a, sev) {
   const img = a.imageDataUrl
-    ? `<img src="${a.imageDataUrl}" style="width:100%;border-radius:4px;margin-bottom:8px;display:block"/>`
+    ? `<img src="${a.imageDataUrl}" onclick="window.__openAnomalyModal('${a.id}')" style="width:100%;border-radius:4px;margin-bottom:8px;display:block;cursor:pointer" title="Click to enlarge"/>`
     : '';
   return `<div style="background:#fff;color:#1d1d1f;padding:12px;border-radius:4px;font-family:monospace;font-size:12px;min-width:230px;border:1px solid #fecaca;box-shadow:0 4px 16px rgba(239,68,68,0.12)">
     ${img}
