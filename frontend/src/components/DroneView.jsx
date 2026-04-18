@@ -2,10 +2,35 @@ import { useEffect, useRef, useState } from 'react';
 import { Camera, Wifi, AlertTriangle, Navigation, Cpu } from 'lucide-react';
 
 const SEVERITY_COLOR = { high: '#ef4444', medium: '#eab308', low: '#3b82f6' };
-const ANALYSIS_FRAME_STRIDE = 3;
-const MIN_INFERENCE_INTERVAL_MS = 75;
-const HARD_SYNC_THRESHOLD = 1.5;
-const SOFT_SYNC_THRESHOLD = 0.2;
+const ANALYSIS_FRAME_STRIDE = 5;
+const MIN_INFERENCE_INTERVAL_MS = 140;
+const HARD_SYNC_THRESHOLD = 3;
+const SOFT_SYNC_THRESHOLD = 0.45;
+const JPEG_QUALITY = 0.8;
+const YOLO_DETECTION_HOLD_MS = 900;
+
+function canvasToBase64(canvas, quality) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        reject(new Error('Failed to encode canvas'));
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result;
+        if (typeof result !== 'string') {
+          reject(new Error('Failed to read encoded frame'));
+          return;
+        }
+        resolve(result.split(',')[1]);
+      };
+      reader.onerror = () => reject(new Error('Failed to read blob'));
+      reader.readAsDataURL(blob);
+    }, 'image/jpeg', quality);
+  });
+}
 
 export default function DroneView({
   videoPath, detections, simulationTime, dronePosition,
@@ -19,6 +44,8 @@ export default function DroneView({
   const inferenceInFlightRef = useRef(false);
   const processedFrameRef = useRef(0);
   const lastInferenceAtRef = useRef(0);
+  const lastPositiveDetectionAtRef = useRef(0);
+  const onYoloDetectionRef = useRef(onYoloDetection);
 
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [yoloDets, setYoloDets] = useState([]);
@@ -39,7 +66,7 @@ export default function DroneView({
       if (Math.abs(drift) > HARD_SYNC_THRESHOLD) {
         video.currentTime = simulationTime;
       } else if (Math.abs(drift) > SOFT_SYNC_THRESHOLD) {
-        video.playbackRate = drift > 0 ? 1.04 : 0.96;
+        video.playbackRate = drift > 0 ? 1.015 : 0.985;
       } else if (video.playbackRate !== 1) {
         video.playbackRate = 1;
       }
@@ -91,12 +118,13 @@ export default function DroneView({
       if (performance.now() - lastInferenceAtRef.current < MIN_INFERENCE_INTERVAL_MS) return;
       inferenceInFlightRef.current = true;
       lastInferenceAtRef.current = performance.now();
+      const frameTimestamp = video.currentTime;
       const oc = offscreen.current;
       oc.width = video.videoWidth; oc.height = video.videoHeight;
       oc.getContext('2d').drawImage(video, 0, 0);
       const t0 = performance.now();
       try {
-        const base64 = oc.toDataURL('image/jpeg', 0.8).split(',')[1];
+        const base64 = await canvasToBase64(oc, JPEG_QUALITY);
         const res = await fetch('http://localhost:8000/detect', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -134,7 +162,7 @@ export default function DroneView({
       clearTimeout(fallbackTimerRef.current);
       inferenceInFlightRef.current = false;
     };
-  }, [videoLoaded, status, onYoloDetection]);
+  }, [videoLoaded, status]);
 
   const videoUrl = videoPath
     ? (videoPath.startsWith('http') ? videoPath : `/videos/${encodeURI(videoPath)}`)

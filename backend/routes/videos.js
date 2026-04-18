@@ -5,26 +5,53 @@ const router = express.Router();
 
 const videosDir = path.resolve(__dirname, '..', '..', 'videos');
 
+function buildUniqueFilename(dir, filename) {
+  const ext = path.extname(filename);
+  const base = path.basename(filename, ext);
+  let candidate = filename;
+  let counter = 1;
+
+  while (fs.existsSync(path.join(dir, candidate))) {
+    candidate = `${base}_${counter}${ext}`;
+    counter += 1;
+  }
+
+  return candidate;
+}
+
 // POST /api/videos/upload — stream raw video body to disk
 // Headers: X-Filename: myvideo.mp4, Content-Type: video/mp4 (or any)
 router.post('/upload', (req, res) => {
   const rawName = req.headers['x-filename'] || `upload_${Date.now()}.mp4`;
   const safeName = path.basename(rawName).replace(/[^a-zA-Z0-9._-]/g, '_');
-  const destPath = path.join(videosDir, safeName);
 
   if (!fs.existsSync(videosDir)) fs.mkdirSync(videosDir, { recursive: true });
 
-  const writeStream = fs.createWriteStream(destPath);
+  const finalName = buildUniqueFilename(videosDir, safeName);
+  const destPath = path.join(videosDir, finalName);
+  const tempPath = path.join(videosDir, `.upload_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.part`);
+  const writeStream = fs.createWriteStream(tempPath, { flags: 'wx' });
+
   req.pipe(writeStream);
 
   writeStream.on('finish', () => {
-    res.json({ success: true, filename: safeName, url: `/videos/${safeName}` });
+    fs.rename(tempPath, destPath, (err) => {
+      if (err) {
+        try { fs.unlinkSync(tempPath); } catch (_) {}
+        res.status(500).json({ error: `Failed to finalize upload: ${err.message}` });
+        return;
+      }
+
+      res.json({ success: true, filename: finalName, url: `/videos/${finalName}` });
+    });
   });
   writeStream.on('error', (err) => {
+    try { fs.unlinkSync(tempPath); } catch (_) {}
     res.status(500).json({ error: `Failed to save file: ${err.message}` });
   });
   req.on('error', (err) => {
     writeStream.destroy();
+    try { fs.unlinkSync(tempPath); } catch (_) {}
     res.status(500).json({ error: `Upload stream error: ${err.message}` });
   });
 });

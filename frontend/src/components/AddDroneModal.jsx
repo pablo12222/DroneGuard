@@ -36,6 +36,15 @@ export const SIMULATION_PRESETS = [
 
 const BASE = 'http://localhost:3001';
 
+async function findExistingVideoFilename(filename) {
+  const res = await fetch(`${BASE}/api/videos`);
+  if (!res.ok) return null;
+
+  const files = await res.json();
+  const match = files.find((item) => item.filename?.toLowerCase() === filename.toLowerCase());
+  return match?.filename || null;
+}
+
 export default function AddDroneModal({ onClose, onAdd, droneCount }) {
   const [selected, setSelected] = useState(null);
   const [droneId, setDroneId] = useState(`DRONE-${String(droneCount + 1).padStart(2, '0')}`);
@@ -51,6 +60,12 @@ export default function AddDroneModal({ onClose, onAdd, droneCount }) {
     setVideoFile(file);
     setUploading(true);
     try {
+      const existingFilename = await findExistingVideoFilename(file.name);
+      if (existingFilename) {
+        setUploadedFilename(existingFilename);
+        return;
+      }
+
       const res = await fetch(`${BASE}/api/videos/upload`, {
         method: 'POST',
         headers: { 'X-Filename': file.name, 'Content-Type': file.type || 'video/mp4' },
