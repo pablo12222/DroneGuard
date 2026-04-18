@@ -52,7 +52,7 @@ export default function LogPanel({ logs }) {
               <div className="flex-1 min-w-0">
                 {/* Timestamp */}
                 {log.timestamp > 0 && (
-                  <span className="text-[#aeaeb2] font-mono mr-1.5 text-[10px]">
+                  <span className="text-black font-mono mr-1.5 text-[10px]">
                     T+{log.timestamp.toFixed(1)}s
                   </span>
                 )}
