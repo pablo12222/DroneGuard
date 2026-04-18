@@ -53,6 +53,13 @@ function centerDistance(a, b) {
   return Math.hypot(ca.x - cb.x, ca.y - cb.y);
 }
 
+function getLoopedVideoTime(time, duration) {
+  if (!Number.isFinite(duration) || duration <= 0) return time;
+  if (time <= duration) return time;
+  const looped = time % duration;
+  return looped < 0 ? looped + duration : looped;
+}
+
 function canvasToBase64(canvas, quality) {
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => {
@@ -148,13 +155,17 @@ export default function DroneView({
     const video = videoRef.current;
     if (!video || !videoLoaded) return;
     if (status === 'running') {
-      const drift = simulationTime - video.currentTime;
+      const targetTime = getLoopedVideoTime(simulationTime, video.duration);
+      const drift = targetTime - video.currentTime;
       if (Math.abs(drift) > HARD_SYNC_THRESHOLD) {
-        video.currentTime = simulationTime;
+        video.currentTime = targetTime;
       } else if (Math.abs(drift) > SOFT_SYNC_THRESHOLD) {
         video.playbackRate = drift > 0 ? 1.015 : 0.985;
       } else if (video.playbackRate !== 1) {
         video.playbackRate = 1;
+      }
+      if (video.ended && Number.isFinite(video.duration) && video.duration > 0) {
+        video.currentTime = targetTime;
       }
       if (video.paused) video.play().catch(() => {});
       return;
@@ -367,12 +378,16 @@ export default function DroneView({
         <div ref={containerRef} className="relative w-full h-full flex items-center justify-center">
           <video ref={videoRef} className="w-full h-full object-contain" src={videoUrl}
             crossOrigin="anonymous"
+            loop={status === 'running'}
             onLoadedData={() => setVideoLoaded(true)}
             onLoadedMetadata={() => setVideoLoaded(true)}
             onEnded={() => {
               if (statusRef.current === 'running') {
                 const v = videoRef.current;
-                if (v) { v.currentTime = 0; v.play().catch(() => {}); }
+                if (v) {
+                  v.currentTime = 0;
+                  v.play().catch(() => {});
+                }
               } else {
                 setVideoEnded(true);
               }
