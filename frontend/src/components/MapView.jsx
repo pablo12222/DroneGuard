@@ -319,7 +319,20 @@ export default function MapView({
         <p className="text-black uppercase tracking-widest text-[12px] mb-2">Legend</p>
         <LegendRow color="bg-[#E4007F]" label="Visited path" line />
         <LegendRow color="bg-slate-300"  label="Planned route" dashed />
-        <LegendRow color="bg-indigo-400" label="Power tower" dot />
+        <div className="flex items-center gap-2 text-[#1d1d1f]">
+          <span className="flex-shrink-0 flex items-center justify-center" style={{ width: 20, height: 20 }}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="17" viewBox="0 0 18 22">
+              <line x1="9" y1="1" x2="2" y2="18" stroke="#6366f1" strokeWidth="1.5" strokeLinecap="round"/>
+              <line x1="9" y1="1" x2="16" y2="18" stroke="#6366f1" strokeWidth="1.5" strokeLinecap="round"/>
+              <line x1="4" y1="7" x2="14" y2="7" stroke="#6366f1" strokeWidth="1.5" strokeLinecap="round"/>
+              <line x1="3" y1="13" x2="15" y2="13" stroke="#6366f1" strokeWidth="1.5" strokeLinecap="round"/>
+              <line x1="2" y1="18" x2="16" y2="18" stroke="#6366f1" strokeWidth="1.5" strokeLinecap="round"/>
+              <circle cx="9" cy="1" r="2" fill="#818cf8"/>
+              <line x1="9" y1="18" x2="9" y2="22" stroke="#6366f1" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </span>
+          <span className="text-black">Power tower</span>
+        </div>
         <LegendRow color="bg-rose-500"   label="Anomaly" dot />
         {yoloAnomalies.length > 0 && <LegendRow color="bg-rose-600" label={`YOLO (${yoloAnomalies.length})`} dot />}
         {otherDrones.filter(d => d.routeData).map(d => (
