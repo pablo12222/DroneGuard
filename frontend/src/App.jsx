@@ -111,7 +111,7 @@ const DEFAULT_DRONES = [
 function makeDefaultDroneState(d) {
   return {
     ...d,
-    missionId: null, status: 'ready', autoStart: true,
+    missionId: null, status: 'ready',
     progress: 0, anomalyCount: 0, detections: [], yoloAnomalies: [],
     aiLiveDetections: [], aiTotalDetections: 0, aiTotalAnomalies: 0,
     logs: [], dronePosition: null, simulationTime: 0, weather: null, routeData: null,
@@ -132,7 +132,6 @@ export default function App() {
   const eventSourcesRef = useRef(new Map());
   const handleSSEEventRef = useRef(null);
   const yoloLogCooldownRef = useRef(new Map());
-  const autoStartedRef = useRef(new Set());
 
   const activeDrone = drones.get(activeDroneId) || null;
 
@@ -338,17 +337,6 @@ export default function App() {
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-start drones flagged with autoStart
-  const handleStartDroneRef = useRef(null);
-  useEffect(() => {
-    drones.forEach((drone) => {
-      if (drone.autoStart && drone.status === 'ready' && !autoStartedRef.current.has(drone.instanceId)) {
-        autoStartedRef.current.add(drone.instanceId);
-        handleStartDroneRef.current?.(drone.instanceId);
-      }
-    });
-  }, [drones]);
-
   const handleSetVideoPath = useCallback((instanceId, path) => {
     updateDrone(instanceId, { videoPath: path });
   }, [updateDrone]);
@@ -421,8 +409,6 @@ export default function App() {
       }));
     }
   }, [drones, updateDrone, connectDroneSSE]);
-  handleStartDroneRef.current = handleStartDrone;
-
   const handleRemoveDrone = useCallback((instanceId) => {
     const drone = drones.get(instanceId);
     if (!drone) return;
@@ -542,6 +528,9 @@ export default function App() {
     if (planningMode) setCustomWaypoints([]);
   }, [planningMode]);
 
+  const drone01 = drones.get('drone_default_1') || null;
+  const drone01Visible = activeView === 'drone' && activeDroneId === 'drone_default_1';
+
   const otherDrones = [...drones.values()]
     .filter(d => d.instanceId !== activeDroneId)
     .map(d => ({ instanceId: d.instanceId, droneId: d.droneId, dronePosition: d.dronePosition, color: d.color, routeData: d.routeData, progress: d.progress }));
@@ -613,37 +602,60 @@ export default function App() {
         />
 
         <main className="flex-1 relative overflow-hidden">
-          {activeView === 'map' ? (
-            <MapView
-              routeData={activeDrone?.routeData}
-              dronePosition={activeDrone?.dronePosition}
-              detections={activeDrone?.detections || []}
-              progress={activeDrone?.progress || 0}
-              activeColor={activeDrone?.color || '#E4007F'}
-              otherDrones={otherDrones}
-              yoloAnomalies={activeYoloAnomalies}
-              planningMode={planningMode}
-              customWaypoints={customWaypoints}
-              onAddWaypoint={handleAddWaypoint}
-            />
-          ) : (
-            <DroneView
-              videoPath={activeDrone?.videoPath || ''}
-              detections={activeDrone?.detections || []}
-              simulationTime={activeDrone?.simulationTime || 0}
-              dronePosition={activeDrone?.dronePosition}
-              progress={activeDrone?.progress || 0}
-              anomalyCount={activeDrone?.anomalyCount || 0}
-              droneId={activeDrone?.droneId || '—'}
-              status={activeDrone?.status || 'idle'}
-              hasVideoCapability={activeDrone?.hasVideoCapability ?? false}
-              onYoloDetection={(dets, ts, stats) => {
-                if (activeDrone?.instanceId) handleYoloDetection(activeDrone.instanceId, dets, ts, stats);
-              }}
-              onYoloAnomaly={(anomaly) => {
-                if (activeDrone?.instanceId) handleYoloAnomaly(activeDrone.instanceId, anomaly);
-              }}
-            />
+          {/* Always-mounted DRONE-01 DroneView for background YOLO inference */}
+          {drone01?.hasVideoCapability && (
+            <div style={{ position: 'absolute', inset: 0, visibility: drone01Visible ? 'visible' : 'hidden' }}>
+              <DroneView
+                videoPath={drone01.videoPath || ''}
+                detections={drone01.detections || []}
+                simulationTime={drone01.simulationTime || 0}
+                dronePosition={drone01.dronePosition}
+                progress={drone01.progress || 0}
+                anomalyCount={drone01.anomalyCount || 0}
+                droneId={drone01.droneId || '—'}
+                status={drone01.status || 'idle'}
+                hasVideoCapability={true}
+                onYoloDetection={(dets, ts, stats) => handleYoloDetection('drone_default_1', dets, ts, stats)}
+                onYoloAnomaly={(anomaly) => handleYoloAnomaly('drone_default_1', anomaly)}
+              />
+            </div>
+          )}
+          {activeView === 'map' && (
+            <div className="absolute inset-0">
+              <MapView
+                routeData={activeDrone?.routeData}
+                dronePosition={activeDrone?.dronePosition}
+                detections={activeDrone?.detections || []}
+                progress={activeDrone?.progress || 0}
+                activeColor={activeDrone?.color || '#E4007F'}
+                otherDrones={otherDrones}
+                yoloAnomalies={activeYoloAnomalies}
+                planningMode={planningMode}
+                customWaypoints={customWaypoints}
+                onAddWaypoint={handleAddWaypoint}
+              />
+            </div>
+          )}
+          {activeView === 'drone' && activeDroneId !== 'drone_default_1' && (
+            <div className="absolute inset-0">
+              <DroneView
+                videoPath={activeDrone?.videoPath || ''}
+                detections={activeDrone?.detections || []}
+                simulationTime={activeDrone?.simulationTime || 0}
+                dronePosition={activeDrone?.dronePosition}
+                progress={activeDrone?.progress || 0}
+                anomalyCount={activeDrone?.anomalyCount || 0}
+                droneId={activeDrone?.droneId || '—'}
+                status={activeDrone?.status || 'idle'}
+                hasVideoCapability={activeDrone?.hasVideoCapability ?? false}
+                onYoloDetection={(dets, ts, stats) => {
+                  if (activeDrone?.instanceId) handleYoloDetection(activeDrone.instanceId, dets, ts, stats);
+                }}
+                onYoloAnomaly={(anomaly) => {
+                  if (activeDrone?.instanceId) handleYoloAnomaly(activeDrone.instanceId, anomaly);
+                }}
+              />
+            </div>
           )}
         </main>
 

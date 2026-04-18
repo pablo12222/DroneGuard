@@ -98,6 +98,9 @@ export default function DroneView({
   const totalDetectionsRef = useRef(0);
   const totalAnomaliesRef = useRef(0);
 
+  const statusRef = useRef(status);
+  useEffect(() => { statusRef.current = status; }, [status]);
+
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [videoEnded, setVideoEnded] = useState(false);
   const [yoloDets, setYoloDets] = useState([]);
@@ -117,6 +120,24 @@ export default function DroneView({
     setVideoEnded(false);
     setVideoLoaded(false);
   }, [videoPath]);
+
+  useEffect(() => {
+    if (status === 'running') setVideoEnded(false);
+    if (status === 'complete') setVideoEnded(true);
+  }, [status]);
+
+  // Play video backwards while drone returns to start
+  useEffect(() => {
+    const video = videoRef.current;
+    if (status !== 'returning' || !videoLoaded || !video) return;
+    video.pause();
+    const interval = setInterval(() => {
+      const v = videoRef.current;
+      if (!v || v.currentTime <= 0) { clearInterval(interval); return; }
+      v.currentTime = Math.max(0, v.currentTime - 0.15);
+    }, 50);
+    return () => clearInterval(interval);
+  }, [status, videoLoaded]);
 
   const mockDets = detections.filter(d =>
     simulationTime >= d.timestamp && simulationTime < d.timestamp + 3
@@ -140,7 +161,7 @@ export default function DroneView({
     }
     if (video.playbackRate !== 1) video.playbackRate = 1;
     if (status === 'paused' && !video.paused) video.pause();
-    if (status !== 'running' && Math.abs(video.currentTime - simulationTime) > 0.05) {
+    if (status !== 'running' && status !== 'returning' && Math.abs(video.currentTime - simulationTime) > 0.05) {
       video.currentTime = simulationTime;
     }
   }, [simulationTime, status, videoLoaded]);
@@ -341,14 +362,21 @@ export default function DroneView({
   return (
     <div className="relative w-full h-full bg-black flex items-center justify-center overflow-hidden">
       {videoEnded ? (
-        <NoCameraFeedView droneId={droneId} simulationTime={simulationTime} />
+        <NoCameraFeedView droneId={droneId} />
       ) : videoUrl ? (
         <div ref={containerRef} className="relative w-full h-full flex items-center justify-center">
           <video ref={videoRef} className="w-full h-full object-contain" src={videoUrl}
             crossOrigin="anonymous"
             onLoadedData={() => setVideoLoaded(true)}
             onLoadedMetadata={() => setVideoLoaded(true)}
-            onEnded={() => setVideoEnded(true)}
+            onEnded={() => {
+              if (statusRef.current === 'running') {
+                const v = videoRef.current;
+                if (v) { v.currentTime = 0; v.play().catch(() => {}); }
+              } else {
+                setVideoEnded(true);
+              }
+            }}
             onError={() => { setVideoLoaded(false); setYoloOnline(false); }}
             muted playsInline />
           {renderOverlay()}
@@ -445,20 +473,33 @@ function NoSignalView({ droneId, simulationTime }) {
   );
 }
 
-function NoCameraFeedView({ droneId, simulationTime }) {
+function NoCameraFeedView({ droneId }) {
+  const [time, setTime] = useState(new Date().toLocaleTimeString());
+  useEffect(() => {
+    const id = setInterval(() => setTime(new Date().toLocaleTimeString()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
   return (
-    <div className="w-full h-full bg-[#0a0a0a] flex flex-col items-center justify-center relative overflow-hidden select-none">
-      <div className="absolute inset-0 opacity-[0.03]"
-        style={{ backgroundImage: 'repeating-linear-gradient(0deg, #fff 0px, #fff 1px, transparent 1px, transparent 3px)', backgroundSize: '100% 3px' }} />
-      <div className="relative z-10 flex flex-col items-center gap-5">
-        <div className="w-20 h-20 relative flex items-center justify-center">
-          <div className="absolute inset-0 rounded-full border border-[#E4007F]/20 animate-ping" style={{ animationDuration: '2s' }} />
-          <div className="absolute inset-0 rounded-full border border-[#E4007F]/10" />
-          <Camera size={28} className="text-[#E4007F]/40" />
+    <div
+      className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden select-none"
+      style={{
+        background: '#060010',
+        backgroundImage: 'radial-gradient(circle, rgba(228,0,127,0.18) 1px, transparent 1px)',
+        backgroundSize: '28px 28px',
+      }}
+    >
+      <div className="relative flex flex-col items-center gap-6 z-10">
+        <div className="relative w-32 h-32 flex items-center justify-center">
+          <div className="absolute inset-0 rounded-full border-2 border-[#E4007F]/25 animate-ping" style={{ animationDuration: '2s' }} />
+          <div className="absolute inset-3 rounded-full border border-[#E4007F]/20 animate-spin" style={{ animationDuration: '8s' }} />
+          <div className="absolute inset-6 rounded-full border border-[#E4007F]/15 animate-spin" style={{ animationDuration: '14s', animationDirection: 'reverse' }} />
+          <Camera size={36} className="text-[#E4007F]/70 relative z-10" />
         </div>
         <div className="text-center font-mono tracking-widest">
-          <p className="text-[#E4007F]/50 text-xs uppercase mb-1">NO CAMERA FEED</p>
-          <p className="text-white/20 text-[10px]">{droneId} · T+{simulationTime?.toFixed(0) ?? 0}s</p>
+          <p className="text-[#E4007F]/80 text-sm uppercase font-bold mb-1.5 tracking-[0.3em]">DRONE CAMERA FEED</p>
+          <p className="text-white/30 text-[11px] tracking-widest mb-0.5">{droneId}</p>
+          <p className="text-white/20 text-[10px] tracking-wider">{time}</p>
         </div>
       </div>
     </div>
