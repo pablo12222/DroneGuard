@@ -411,9 +411,9 @@ export default function App() {
     if (planningMode) setCustomWaypoints([]);
   }, [planningMode]);
 
-  const otherDrones = [...drones.values()].filter(
-    d => d.instanceId !== activeDroneId && d.dronePosition
-  ).map(d => ({ instanceId: d.instanceId, droneId: d.droneId, dronePosition: d.dronePosition, color: d.color }));
+  const otherDrones = [...drones.values()]
+    .filter(d => d.instanceId !== activeDroneId)
+    .map(d => ({ instanceId: d.instanceId, droneId: d.droneId, dronePosition: d.dronePosition, color: d.color, routeData: d.routeData, progress: d.progress }));
 
   const headerStatus = activeDrone?.status || 'idle';
   const statusDot = {

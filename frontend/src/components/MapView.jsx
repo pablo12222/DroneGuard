@@ -67,18 +67,19 @@ export default function MapView({
   planningMode = false, customWaypoints = [], onAddWaypoint,
   activeColor = '#E4007F',
 }) {
-  const mapRef          = useRef(null);
-  const mapInstance     = useRef(null);
-  const droneMarker     = useRef(null);
-  const routeLine       = useRef(null);
-  const visitedLine     = useRef(null);
-  const towerMarkers    = useRef([]);
-  const alertMarkers    = useRef({});
-  const tileLayer       = useRef(null);
-  const secondaryRefs   = useRef({});
-  const planWaypoints   = useRef([]);
-  const planLine        = useRef(null);
-  const onAddWaypointRef = useRef(onAddWaypoint);
+  const mapRef            = useRef(null);
+  const mapInstance       = useRef(null);
+  const droneMarker       = useRef(null);
+  const routeLine         = useRef(null);
+  const visitedLine       = useRef(null);
+  const towerMarkers      = useRef([]);
+  const alertMarkers      = useRef({});
+  const tileLayer         = useRef(null);
+  const secondaryRefs     = useRef({});
+  const secondaryRoutes   = useRef({}); // instanceId → { routeLine, visitedLine }
+  const planWaypoints     = useRef([]);
+  const planLine          = useRef(null);
+  const onAddWaypointRef  = useRef(onAddWaypoint);
   onAddWaypointRef.current = onAddWaypoint;
 
   const [styleId, setStyleId] = useState('light');
@@ -193,13 +194,44 @@ export default function MapView({
     const map = mapInstance.current;
     if (!map) return;
     const activeIds = new Set(otherDrones.map(d => d.instanceId));
+
+    // Remove stale drone markers and route layers
     Object.keys(secondaryRefs.current).forEach(id => {
       if (!activeIds.has(id)) {
         map.removeLayer(secondaryRefs.current[id]);
         delete secondaryRefs.current[id];
       }
     });
+    Object.keys(secondaryRoutes.current).forEach(id => {
+      if (!activeIds.has(id)) {
+        const lr = secondaryRoutes.current[id];
+        if (lr.routeLine) map.removeLayer(lr.routeLine);
+        if (lr.visitedLine) map.removeLayer(lr.visitedLine);
+        delete secondaryRoutes.current[id];
+      }
+    });
+
     otherDrones.forEach(d => {
+      // Route lines
+      if (d.routeData?.waypoints?.length >= 2) {
+        const coords = d.routeData.waypoints.map(w => [w.lat, w.lng]);
+        const existing = secondaryRoutes.current[d.instanceId];
+        if (!existing) {
+          const rl = L.polyline(coords, { color: d.color, weight: 2.5, dashArray: '7 5', opacity: 0.5 }).addTo(map);
+          const vl = L.polyline([], { color: d.color, weight: 3, opacity: 0.7 }).addTo(map);
+          secondaryRoutes.current[d.instanceId] = { routeLine: rl, visitedLine: vl };
+        }
+        // Update visited segment
+        const vl = secondaryRoutes.current[d.instanceId]?.visitedLine;
+        if (vl && d.dronePosition && d.routeData.estimatedDuration) {
+          const simTime = (d.progress / 100) * d.routeData.estimatedDuration;
+          const visited = d.routeData.waypoints.filter(w => w.timestamp <= simTime).map(w => [w.lat, w.lng]);
+          if (d.dronePosition) visited.push([d.dronePosition.lat, d.dronePosition.lng]);
+          vl.setLatLngs(visited);
+        }
+      }
+
+      // Drone marker
       if (!d.dronePosition) return;
       const pos = [d.dronePosition.lat, d.dronePosition.lng];
       if (secondaryRefs.current[d.instanceId]) {
@@ -249,23 +281,23 @@ export default function MapView({
       )}
 
       {/* Legend */}
-      <div className="absolute top-3 right-3 z-[400] bg-white/90 backdrop-blur-sm border border-black/6 rounded px-4 py-3 shadow-sm space-y-1.5 text-xs font-mono">
+      <div className="absolute top-3 right-3 z-[400] bg-white/90 backdrop-blur-sm border border-black/6 rounded-sm px-4 py-3 shadow-sm space-y-1.5 text-xs font-mono">
         <p className="text-black uppercase tracking-widest text-[10px] mb-2">Legend</p>
         <LegendRow color="bg-[#E4007F]" label="Visited path" line />
         <LegendRow color="bg-slate-300"  label="Planned route" dashed />
         <LegendRow color="bg-indigo-400" label="Power tower" dot />
         <LegendRow color="bg-rose-500"   label="Anomaly" dot />
-        {otherDrones.length > 0 && otherDrones.map(d => (
+        {otherDrones.filter(d => d.routeData).map(d => (
           <div key={d.instanceId} className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
-            <span className="text-black">{d.droneId}</span>
+            <span className="w-5 h-0.5 rounded-sm flex-shrink-0" style={{ backgroundColor: d.color }} />
+            <span className="text-[#6e6e73]">{d.droneId}</span>
           </div>
         ))}
       </div>
 
       {/* Telemetry chip */}
       {dronePosition && (
-        <div className="absolute bottom-3 left-3 z-[400] bg-white/90 backdrop-blur-sm border border-black/6 rounded px-4 py-3 shadow-sm text-xs font-mono space-y-0.5">
+        <div className="absolute bottom-3 left-3 z-[400] bg-white/90 backdrop-blur-sm border border-black/6 rounded-sm px-4 py-3 shadow-sm text-xs font-mono space-y-0.5">
           <p className="text-black uppercase tracking-widest text-[10px] mb-1.5">Telemetry</p>
           <TelRow label="LAT" value={dronePosition.lat.toFixed(6)} />
           <TelRow label="LNG" value={dronePosition.lng.toFixed(6)} />
