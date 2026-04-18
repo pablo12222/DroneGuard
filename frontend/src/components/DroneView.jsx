@@ -7,15 +7,19 @@ export default function DroneView({
   videoPath, detections, simulationTime, dronePosition,
   progress, anomalyCount, droneId, status, onYoloDetection,
 }) {
-  const videoRef    = useRef(null);
-  const offscreen   = useRef(typeof document !== 'undefined' ? document.createElement('canvas') : null);
-  const intervalRef = useRef(null);
+  const containerRef = useRef(null);
+  const videoRef = useRef(null);
+  const offscreen = useRef(typeof document !== 'undefined' ? document.createElement('canvas') : null);
+  const frameHandleRef = useRef(null);
+  const fallbackTimerRef = useRef(null);
+  const inferenceInFlightRef = useRef(false);
+  const processedFrameRef = useRef(0);
 
-  const [videoLoaded, setVideoLoaded]     = useState(false);
-  const [annotatedSrc, setAnnotatedSrc]   = useState(null); // base64 JPEG from YOLO .plot()
-  const [yoloDets, setYoloDets]           = useState([]);
-  const [yoloOnline, setYoloOnline]       = useState(false);
-  const [inferMs, setInferMs]             = useState(null);
+  const [videoLoaded, setVideoLoaded] = useState(false);
+  const [yoloDets, setYoloDets] = useState([]);
+  const [yoloOnline, setYoloOnline] = useState(false);
+  const [inferMs, setInferMs] = useState(null);
+  const [overlayBox, setOverlayBox] = useState(null);
 
   // Mock detections (only shown when YOLO is offline or no video)
   const mockDets = detections.filter(d =>
@@ -34,27 +38,76 @@ export default function DroneView({
     if (status === 'paused'  && !video.paused) video.pause();
   }, [simulationTime, status, videoLoaded]);
 
-  // Real-time YOLO inference loop
+  // Keep the overlay sized to the actual rendered video area.
   useEffect(() => {
-    clearInterval(intervalRef.current);
+    if (!videoLoaded) {
+      setOverlayBox(null);
+      return;
+    }
+
+    const updateOverlayBox = () => {
+      const container = containerRef.current;
+      const video = videoRef.current;
+      if (!container || !video || !video.videoWidth || !video.videoHeight) {
+        setOverlayBox(null);
+        return;
+      }
+
+      const containerWidth = container.clientWidth;
+      const containerHeight = container.clientHeight;
+      const scale = Math.min(containerWidth / video.videoWidth, containerHeight / video.videoHeight);
+      const width = video.videoWidth * scale;
+      const height = video.videoHeight * scale;
+
+      setOverlayBox({
+        left: (containerWidth - width) / 2,
+        top: (containerHeight - height) / 2,
+        width,
+        height,
+        sourceWidth: video.videoWidth,
+        sourceHeight: video.videoHeight,
+      });
+    };
+
+    updateOverlayBox();
+
+    const container = containerRef.current;
+    const observer = typeof ResizeObserver !== 'undefined' && container
+      ? new ResizeObserver(updateOverlayBox)
+      : null;
+
+    if (observer && container) observer.observe(container);
+    window.addEventListener('resize', updateOverlayBox);
+
+    return () => {
+      window.removeEventListener('resize', updateOverlayBox);
+      observer?.disconnect();
+    };
+  }, [videoLoaded, videoPath]);
+
+  // Real-time YOLO inference loop: analyze every 3rd frame, up to ~20 FPS for 60 FPS video.
+  useEffect(() => {
     const video = videoRef.current;
     if (!videoLoaded || !video || status !== 'running') {
-      setAnnotatedSrc(null);
       setYoloDets([]);
       return;
     }
 
-    intervalRef.current = setInterval(async () => {
-      if (video.paused || video.ended || !video.videoWidth) return;
+    let cancelled = false;
+    processedFrameRef.current = 0;
 
+    const runInference = async () => {
+      if (cancelled || inferenceInFlightRef.current || video.paused || video.ended || !video.videoWidth) return;
+
+      inferenceInFlightRef.current = true;
       const oc = offscreen.current;
-      oc.width  = video.videoWidth;
+      oc.width = video.videoWidth;
       oc.height = video.videoHeight;
       oc.getContext('2d').drawImage(video, 0, 0);
-      const base64 = oc.toDataURL('image/jpeg', 0.8).split(',')[1];
-
       const t0 = performance.now();
+
       try {
+        const base64 = oc.toDataURL('image/jpeg', 0.8).split(',')[1];
         const res = await fetch('http://localhost:8000/detect', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -71,60 +124,122 @@ export default function DroneView({
         setInferMs(Math.round(performance.now() - t0));
         setYoloDets(data.detections || []);
 
-        // Display the annotated frame from results[0].plot()
-        if (data.annotatedFrame) {
-          setAnnotatedSrc(`data:image/jpeg;base64,${data.annotatedFrame}`);
-        }
-
         if (data.detections?.length > 0) {
           onYoloDetection?.(data.detections, video.currentTime);
         }
       } catch {
         setYoloOnline(false);
-        setAnnotatedSrc(null);
         setYoloDets([]);
+      } finally {
+        inferenceInFlightRef.current = false;
       }
-    }, 1200);
+    };
 
-    return () => clearInterval(intervalRef.current);
+    const scheduleNext = () => {
+      if (cancelled) return;
+
+      if (typeof video.requestVideoFrameCallback === 'function') {
+        frameHandleRef.current = video.requestVideoFrameCallback(() => {
+          processedFrameRef.current += 1;
+          if (processedFrameRef.current % 3 === 0) {
+            void runInference();
+          }
+          scheduleNext();
+        });
+        return;
+      }
+
+      fallbackTimerRef.current = setTimeout(() => {
+        void runInference();
+        scheduleNext();
+      }, 50);
+    };
+
+    scheduleNext();
+
+    return () => {
+      cancelled = true;
+      if (typeof video.cancelVideoFrameCallback === 'function' && frameHandleRef.current != null) {
+        video.cancelVideoFrameCallback(frameHandleRef.current);
+      }
+      clearTimeout(fallbackTimerRef.current);
+      inferenceInFlightRef.current = false;
+    };
   }, [videoLoaded, status, onYoloDetection]);
 
-  // Clear annotated frame when paused/stopped
-  useEffect(() => {
-    if (status !== 'running') setAnnotatedSrc(null);
-  }, [status]);
-
   const videoUrl = videoPath
-    ? (videoPath.startsWith('http') ? videoPath : `http://localhost:3001/videos/${videoPath}`)
+    ? (videoPath.startsWith('http') ? videoPath : `/videos/${encodeURI(videoPath)}`)
     : null;
 
   const isRunning = status === 'running';
+  const showYoloOverlay = yoloOnline && overlayBox && yoloDets.length > 0;
+
+  const renderOverlay = () => {
+    if (!showYoloOverlay) return null;
+
+    const scaleX = overlayBox.width / overlayBox.sourceWidth;
+    const scaleY = overlayBox.height / overlayBox.sourceHeight;
+
+    return (
+      <div
+        className="absolute pointer-events-none"
+        style={{
+          left: `${overlayBox.left}px`,
+          top: `${overlayBox.top}px`,
+          width: `${overlayBox.width}px`,
+          height: `${overlayBox.height}px`,
+        }}
+      >
+        {yoloDets.map((det, index) => {
+          const color = SEVERITY_COLOR[det.severity] || '#3b82f6';
+          const left = det.bbox.x * scaleX;
+          const top = det.bbox.y * scaleY;
+          const width = det.bbox.w * scaleX;
+          const height = det.bbox.h * scaleY;
+
+          return (
+            <div
+              key={det.id ?? `${det.className}-${index}`}
+              className="absolute"
+              style={{ left, top, width, height }}
+            >
+              <div
+                className="absolute inset-0 rounded-md border-2"
+                style={{ borderColor: color, boxShadow: `0 0 0 1px rgba(0,0,0,0.35) inset` }}
+              />
+              <div
+                className="absolute left-0 top-0 -translate-y-full rounded-t-md px-2 py-1 text-[10px] font-mono font-semibold text-white whitespace-nowrap"
+                style={{ backgroundColor: color, maxWidth: '100%' }}
+              >
+                {det.className} {(det.confidence * 100).toFixed(0)}%
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
   return (
     <div className="relative w-full h-full bg-black flex items-center justify-center overflow-hidden">
       {videoUrl ? (
-        <>
-          {/* Source video (hidden when annotated frame available) */}
+        <div ref={containerRef} className="relative w-full h-full flex items-center justify-center">
           <video
             ref={videoRef}
             className="w-full h-full object-contain"
-            style={{ opacity: annotatedSrc ? 0 : 1 }}
             src={videoUrl}
+            crossOrigin="anonymous"
             onLoadedData={() => setVideoLoaded(true)}
-            onError={() => setVideoLoaded(false)}
+            onLoadedMetadata={() => setVideoLoaded(true)}
+            onError={() => {
+              setVideoLoaded(false);
+              setYoloOnline(false);
+            }}
             muted
             playsInline
           />
-
-          {/* Annotated frame from YOLO results[0].plot() */}
-          {annotatedSrc && (
-            <img
-              src={annotatedSrc}
-              alt="YOLO annotated"
-              className="absolute inset-0 w-full h-full object-contain"
-            />
-          )}
-        </>
+          {renderOverlay()}
+        </div>
       ) : (
         <NoVideoView simulationTime={simulationTime} droneId={droneId} />
       )}
