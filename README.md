@@ -1,94 +1,288 @@
-# DroneGuard — Energy Infrastructure Inspection System
+# DroneGuard
 
-Proof of Concept for drone-based 110kV power line inspection with real-time anomaly detection.
+Proof-of-concept platform for drone-based power line inspection with a live dashboard, simulated mission control, and YOLO-based visual detection from uploaded video.
+
+## Overview
+
+DroneGuard combines three parts:
+
+- a `React + Vite` frontend for the operator dashboard
+- a `Node.js + Express` backend for mission control, SSE events, route data, and video serving
+- an optional `FastAPI + YOLO` service for live detection overlays and anomaly classification
+
+The current flow is:
+
+1. start backend, frontend, and optionally the YOLO service
+2. upload or select a video from the `videos/` folder
+3. launch a mission from the dashboard
+4. watch the drone route on the map and view live detections in Drone View
+
+## Main Features
+
+- Live operator dashboard with map and drone camera view
+- Simulated inspection missions over predefined routes
+- Server-Sent Events stream for telemetry and mission logs
+- Video upload and local video playback from the repo `videos/` directory
+- YOLO-based box overlay on video frames
+- Additional classifier stage for condition labels such as `good`, `rust`, `missing-cap`, and `bird-nest`
+- Live cumulative counting of detections and anomalies from video analysis
+- Optional GPU acceleration for YOLO inference
 
 ## Architecture
 
+```text
+DroneGuard/
+|- backend/        Express API, mission simulation, SSE, video routes
+|- frontend/       React dashboard UI
+|- python-yolo/    FastAPI inference service
+|- models/         Detector and classifier weights
+|- data/           Routes and mock detections
+|- videos/         Uploaded or manually copied inspection videos
+|- start-backend.bat
+|- start-frontend.bat
+`- start-yolo.bat
 ```
-project-root/
-├── backend/          Node.js + Express — API & SSE simulation
-├── frontend/         React + Vite + Tailwind — Dashboard UI
-├── python-yolo/      FastAPI — YOLO inference (optional)
-├── data/
-│   ├── routes/       Inspection route definitions (JSON)
-│   └── detections/   Mock detection data (JSON)
-└── videos/           Place drone footage here (MP4)
-```
+
+### Frontend
+
+The frontend is built with:
+
+- `react`
+- `vite`
+- `tailwindcss`
+- `leaflet`
+- `react-leaflet`
+- `lucide-react`
+
+Main responsibilities:
+
+- drone control panel
+- map route visualization
+- drone camera view
+- live log panel
+- weather and mission status display
+
+### Backend
+
+The backend is built with:
+
+- `express`
+- `cors`
+- `uuid`
+- `node-fetch`
+
+Main responsibilities:
+
+- mission lifecycle management
+- simulated drone telemetry
+- SSE streaming
+- route and detection APIs
+- video upload and static video serving from `/videos`
+
+### YOLO Service
+
+The Python service uses:
+
+- `fastapi`
+- `uvicorn`
+- `ultralytics`
+- `opencv-python-headless`
+- `numpy`
+- `Pillow`
+- `torchvision`
+
+Main responsibilities:
+
+- frame inference from uploaded video
+- detector inference using the selected `.pt` model
+- optional classifier inference per crop
+- returning normalized detections and annotated frame output
+
+## Models
+
+The project now keeps model files in `models/`:
+
+- `models/detectors/demo-best.pt`
+- `models/detectors/legacy-best.pt`
+- `models/classifiers/*.pt`
+
+The YOLO service prefers `demo-best.pt` and falls back to `legacy-best.pt` if needed.
+
+## Requirements
+
+Install these tools before running the project:
+
+- `Node.js 18+` with `npm`
+- `Python 3.10+`
+- `Git`
+
+Optional for GPU inference:
+
+- NVIDIA GPU
+- compatible CUDA / driver setup
+- CUDA-enabled PyTorch environment
 
 ## Quick Start
 
-### 1. Start Backend (Terminal 1)
+### Option 1: Use the provided `.bat` files
+
+From the project root:
+
+- run `start-backend.bat`
+- run `start-frontend.bat`
+- run `start-yolo.bat` if you want live AI detection
+
+These scripts install missing dependencies automatically when possible.
+
+### Option 2: Manual startup
+
+#### Backend
+
 ```bash
 cd backend
 npm install
 npm run dev
-# Runs on http://localhost:3001
 ```
 
-### 2. Start Frontend (Terminal 2)
+Backend runs on:
+
+- `http://localhost:3001`
+- health: `http://localhost:3001/api/health`
+
+#### Frontend
+
 ```bash
 cd frontend
 npm install
 npm run dev
-# Opens http://localhost:5173
 ```
 
-### 3. (Optional) Start YOLO Service (Terminal 3)
+Frontend runs on:
+
+- `http://localhost:5173`
+
+#### YOLO Service
+
 ```bash
 cd python-yolo
 python -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn main:app --host 0.0.0.0 --port 8000
-# Runs on http://localhost:8000
 ```
 
-Or just double-click the `.bat` files.
+YOLO service runs on:
 
-## Using the Dashboard
+- `http://localhost:8000`
+- health: `http://localhost:8000/health`
 
-1. Open **http://localhost:5173**
-2. Select route from dropdown (Silesia 110kV is preloaded)
-3. Optionally enter a video filename in the **Video File** field (place MP4 in `videos/`)
-4. Click **Start Inspection**
-5. Watch the drone move on the map in real time
-6. Switch to **Drone View** to see the camera feed + detection overlays
-7. Monitor anomaly alerts in the **System Log** panel
-8. Click red alert triangles on the map for detection details
+## How To Use
 
-## API Endpoints
+1. Start backend and frontend.
+2. Optionally start the YOLO service.
+3. Add a video to the `videos/` folder, or upload it from the UI.
+4. Open the dashboard at `http://localhost:5173`.
+5. Start a mission.
+6. Switch to `Drone View` to see the video with AI overlays.
+7. Watch detections, anomalies, and mission logs update live.
 
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | /api/inspection/start | Start inspection mission |
-| POST | /api/inspection/pause | Pause/resume mission |
-| POST | /api/inspection/reset | Reset mission |
-| GET  | /api/inspection/:id/status | Current mission state |
-| GET  | /api/mission/:id/stream | SSE event stream |
-| GET  | /api/routes | List available routes |
-| GET  | /api/routes/:id | Full route with waypoints |
-| GET  | /api/detections/:inspectionId | Detections for mission |
+## Video Handling
 
-## YOLO Classes
+Videos are served from the repository-level `videos/` folder.
 
-| ID | Class | Anomaly |
-|----|-------|---------|
-| 0 | yoke | — |
-| 3 | stockbridge damper | ⚠ medium |
-| 4 | lightning rod shackle | ⚠ medium |
-| 6 | polymer insulator | ⚠ high |
-| 7 | glass insulator | ⚠ high |
-| 9 | vari-grip | ⚠ high |
-| 15 | glass insulator tower shackle | ⚠ high |
+You can:
 
-## Adding a Video
+- manually copy files into `videos/`
+- or upload them through the app using the backend video API
 
-1. Copy any drone inspection video to `videos/inspection.mp4`
-2. In the dashboard Control Panel, enter `inspection.mp4` in the Video File field
-3. Start the inspection — the video will sync with the simulation timeline
+Available video endpoints:
 
-## Extending with Real YOLO
+- `GET /api/videos` - list available video files
+- `POST /api/videos/upload` - upload a video file
+- `GET /videos/<filename>` - direct static file access
 
-The Python service at `python-yolo/main.py` connects to `best.pt` in the project root.
-When running, the Node backend can call `POST http://localhost:8000/detect` with a frame path.
-To enable real inference, edit `backend/services/detectionService.js` and call `runYoloInference()`.
+## API Summary
+
+### Inspection
+
+- `POST /api/inspection/start`
+- `POST /api/inspection/pause`
+- `POST /api/inspection/reset`
+- `DELETE /api/inspection/:id`
+
+### Mission / Stream
+
+- `GET /api/mission/:id/stream`
+
+### Routes and Detections
+
+- `GET /api/routes`
+- `GET /api/routes/:id`
+- `GET /api/detections/:inspectionId`
+
+### Health
+
+- `GET /api/health`
+- `GET /health` on the YOLO service
+
+## Live Detection Logic
+
+When the YOLO service is enabled:
+
+- the frontend samples frames from the selected video
+- frames are sent to the Python service
+- YOLO returns detected boxes
+- the UI renders those boxes directly over the playing video
+- the dashboard counts live detections and anomalies cumulatively during the mission
+
+The mission simulation and the video pipeline are connected, but they are not the same thing:
+
+- backend mission state drives route progress, telemetry, and SSE logs
+- YOLO drives live video boxes and AI-based detection counters
+
+## Troubleshooting
+
+### YOLO does not start
+
+Check:
+
+- Python is installed and available as `python` or `py -3`
+- `python-yolo/venv` was created correctly
+- `pip install -r requirements.txt` completed without errors
+
+### YOLO runs on CPU instead of GPU
+
+Check:
+
+- `torch.cuda.is_available()` returns `True`
+- NVIDIA drivers are installed
+- your PyTorch environment is CUDA-enabled
+- `/health` from the YOLO service reports `device: cuda:0`
+
+### Video appears but no boxes are shown
+
+Check:
+
+- the YOLO service is running on `localhost:8000`
+- the selected model exists in `models/detectors/`
+- the video is actually being sent for inference
+- the model can detect objects in that specific footage
+
+### Repository not found on GitHub
+
+This usually means:
+
+- the repository is private
+- the user was not added as a collaborator
+- the user is logged into the wrong GitHub account
+
+## Development Notes
+
+- Frontend and backend use relative paths from the project root.
+- The backend serves videos directly from the root `videos/` directory.
+- The default demo drone uses `trasa1.mp4`.
+- The drone video can loop during a running mission.
+
+## License
+
+This repository currently does not define a separate license file.
