@@ -21,12 +21,41 @@ function loadRoute(routeId) {
   return null;
 }
 
+// GET /api/inspection — list all active missions
+router.get('/', (req, res) => {
+  res.json(simulation.listMissions());
+});
+
+// DELETE /api/inspection/:missionId — stop and remove a mission
+router.delete('/:missionId', (req, res) => {
+  try {
+    simulation.deleteMission(req.params.missionId);
+    res.json({ success: true, missionId: req.params.missionId });
+  } catch (err) {
+    res.status(404).json({ error: err.message });
+  }
+});
+
 // POST /api/inspection/start
 router.post('/start', async (req, res) => {
   try {
-    const { name, droneId, routeId, videoPath, missionId: reqMissionId } = req.body;
+    const { name, droneId, routeId, routeData: inlineRoute, videoPath, missionId: reqMissionId } = req.body;
 
-    const route = loadRoute(routeId);
+    let route;
+    if (inlineRoute && Array.isArray(inlineRoute.waypoints) && inlineRoute.waypoints.length >= 2) {
+      route = {
+        id: `custom_${Date.now()}`,
+        name: inlineRoute.name || 'Custom Route',
+        waypoints: inlineRoute.waypoints,
+        estimatedDuration: inlineRoute.estimatedDuration || (inlineRoute.waypoints.length - 1) * 10,
+        totalDistance: inlineRoute.totalDistance || 0,
+        region: 'Custom',
+        lineVoltage: 'N/A',
+        operator: 'Manual',
+      };
+    } else {
+      route = loadRoute(routeId);
+    }
     if (!route) return res.status(404).json({ error: 'Route not found' });
 
     const missionId = reqMissionId || uuidv4();

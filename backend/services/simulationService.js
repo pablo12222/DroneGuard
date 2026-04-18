@@ -190,6 +190,33 @@ class SimulationService {
     clientSet.forEach(res => { try { res.write(msg); } catch (_) {} });
   }
 
+  deleteMission(missionId) {
+    const state = this.missions.get(missionId);
+    if (!state) throw new Error('Mission not found');
+    clearInterval(state.interval);
+    const clientSet = this.clients.get(missionId);
+    if (clientSet) {
+      clientSet.forEach(res => { try { res.end(); } catch (_) {} });
+      this.clients.delete(missionId);
+    }
+    this.missions.delete(missionId);
+  }
+
+  listMissions() {
+    const result = [];
+    this.missions.forEach((state, id) => {
+      result.push({
+        missionId: id,
+        name: state.name,
+        droneId: state.droneId,
+        status: state.status,
+        progress: state.progress,
+        anomalyCount: state.anomalyCount,
+      });
+    });
+    return result;
+  }
+
   _emitLog(missionId, level, message) {
     this._emit(missionId, {
       type: 'log',

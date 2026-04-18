@@ -15,6 +15,11 @@ export const api = {
     if (!res.ok) throw new Error(`POST ${path} failed: ${res.status}`);
     return res.json();
   },
+  async delete(path) {
+    const res = await fetch(`${BASE}${path}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error(`DELETE ${path} failed: ${res.status}`);
+    return res.json();
+  },
   sseUrl(missionId) {
     return `${BASE}/api/mission/${missionId}/stream`;
   },

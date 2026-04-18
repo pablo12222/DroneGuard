@@ -1,0 +1,24 @@
+{
+  "id": "route_krakow_110kv",
+  "name": "Kraków 110kV Line Patrol",
+  "description": "Distribution line inspection — Kraków Bieżanów to Wieliczka substation corridor",
+  "totalDistance": 11.8,
+  "estimatedDuration": 99,
+  "region": "Małopolska, Poland",
+  "lineVoltage": "110kV",
+  "operator": "TAURON Dystrybucja S.A.",
+  "waypoints": [
+    { "id": 0,  "lat": 50.0100, "lng": 20.0200, "altitude": 75, "timestamp": 0,   "name": "Tower K-001", "type": "tower", "description": "Start — Bieżanów distribution hub" },
+    { "id": 1,  "lat": 50.0068, "lng": 20.0313, "altitude": 76, "timestamp": 9,   "name": "Tower K-002", "type": "tower" },
+    { "id": 2,  "lat": 50.0035, "lng": 20.0427, "altitude": 77, "timestamp": 18,  "name": "Tower K-003", "type": "tower" },
+    { "id": 3,  "lat": 50.0005, "lng": 20.0542, "altitude": 75, "timestamp": 27,  "name": "Tower K-004", "type": "tower" },
+    { "id": 4,  "lat": 49.9975, "lng": 20.0655, "altitude": 78, "timestamp": 36,  "name": "Tower K-005", "type": "tower" },
+    { "id": 5,  "lat": 49.9948, "lng": 20.0760, "altitude": 76, "timestamp": 45,  "name": "Tower K-006", "type": "tower" },
+    { "id": 6,  "lat": 49.9920, "lng": 20.0852, "altitude": 79, "timestamp": 54,  "name": "Tower K-007", "type": "tower" },
+    { "id": 7,  "lat": 49.9895, "lng": 20.0932, "altitude": 77, "timestamp": 63,  "name": "Tower K-008", "type": "tower" },
+    { "id": 8,  "lat": 49.9865, "lng": 20.1008, "altitude": 75, "timestamp": 72,  "name": "Tower K-009", "type": "tower" },
+    { "id": 9,  "lat": 49.9840, "lng": 20.1082, "altitude": 78, "timestamp": 81,  "name": "Tower K-010", "type": "tower" },
+    { "id": 10, "lat": 49.9815, "lng": 20.1152, "altitude": 76, "timestamp": 90,  "name": "Tower K-011", "type": "tower" },
+    { "id": 11, "lat": 49.9790, "lng": 20.1220, "altitude": 75, "timestamp": 99,  "name": "Tower K-012", "type": "tower", "description": "End — Wieliczka substation" }
+  ]
+}

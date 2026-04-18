@@ -1,0 +1,27 @@
+{
+  "id": "route_rybnik_110kv",
+  "name": "Rybnik 110kV Line Patrol",
+  "description": "Transmission line inspection — Rybnik to Wodzisław Śląski corridor, southern Silesia",
+  "totalDistance": 18.7,
+  "estimatedDuration": 128,
+  "region": "Silesia (South), Poland",
+  "lineVoltage": "110kV",
+  "operator": "TAURON Dystrybucja S.A.",
+  "waypoints": [
+    { "id": 0,  "lat": 50.1140, "lng": 18.5260, "altitude": 88, "timestamp": 0,   "name": "Tower R-001", "type": "tower", "description": "Start — Rybnik substation north" },
+    { "id": 1,  "lat": 50.1095, "lng": 18.5380, "altitude": 90, "timestamp": 9,   "name": "Tower R-002", "type": "tower" },
+    { "id": 2,  "lat": 50.1048, "lng": 18.5495, "altitude": 89, "timestamp": 18,  "name": "Tower R-003", "type": "tower" },
+    { "id": 3,  "lat": 50.1002, "lng": 18.5610, "altitude": 91, "timestamp": 27,  "name": "Tower R-004", "type": "tower" },
+    { "id": 4,  "lat": 50.0955, "lng": 18.5730, "altitude": 88, "timestamp": 36,  "name": "Tower R-005", "type": "tower" },
+    { "id": 5,  "lat": 50.0905, "lng": 18.5848, "altitude": 90, "timestamp": 45,  "name": "Tower R-006", "type": "tower" },
+    { "id": 6,  "lat": 50.0852, "lng": 18.5965, "altitude": 92, "timestamp": 54,  "name": "Tower R-007", "type": "tower" },
+    { "id": 7,  "lat": 50.0798, "lng": 18.6080, "altitude": 89, "timestamp": 63,  "name": "Tower R-008", "type": "tower" },
+    { "id": 8,  "lat": 50.0745, "lng": 18.6195, "altitude": 91, "timestamp": 72,  "name": "Tower R-009", "type": "tower" },
+    { "id": 9,  "lat": 50.0692, "lng": 18.6315, "altitude": 90, "timestamp": 81,  "name": "Tower R-010", "type": "tower" },
+    { "id": 10, "lat": 50.0638, "lng": 18.6435, "altitude": 88, "timestamp": 90,  "name": "Tower R-011", "type": "tower" },
+    { "id": 11, "lat": 50.0582, "lng": 18.6550, "altitude": 91, "timestamp": 99,  "name": "Tower R-012", "type": "tower" },
+    { "id": 12, "lat": 50.0525, "lng": 18.6665, "altitude": 89, "timestamp": 108, "name": "Tower R-013", "type": "tower" },
+    { "id": 13, "lat": 50.0468, "lng": 18.6780, "altitude": 90, "timestamp": 117, "name": "Tower R-014", "type": "tower" },
+    { "id": 14, "lat": 50.0410, "lng": 18.6895, "altitude": 88, "timestamp": 128, "name": "Tower R-015", "type": "tower", "description": "End — Wodzisław Śląski approach" }
+  ]
+}

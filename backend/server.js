@@ -7,6 +7,7 @@ const inspectionRoutes = require('./routes/inspection');
 const missionRoutes = require('./routes/mission');
 const routesApi = require('./routes/routesApi');
 const detectionsApi = require('./routes/detections');
+const videosApi = require('./routes/videos');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -24,6 +25,7 @@ app.use('/api/inspection', inspectionRoutes);
 app.use('/api/mission', missionRoutes);
 app.use('/api/routes', routesApi);
 app.use('/api/detections', detectionsApi);
+app.use('/api/videos', videosApi);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), service: 'drone-inspection-backend' });
