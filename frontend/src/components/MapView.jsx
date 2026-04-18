@@ -362,69 +362,64 @@ export default function MapView({
       {/* YOLO anomaly detail modal */}
       {modalAnomaly && (
         <div
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[9999] flex items-center justify-center p-6"
+          className="fixed inset-0 bg-black/85 backdrop-blur-sm z-[9999] flex items-center justify-center p-6"
           onClick={() => setModalAnomaly(null)}
         >
           <div
-            className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden"
+            className="bg-white rounded shadow-2xl w-full max-w-2xl overflow-hidden border border-black/10"
             onClick={e => e.stopPropagation()}
           >
-            {/* Header bar — magenta accent */}
-            <div className="relative">
-              <div className="absolute inset-x-0 top-0 h-1 bg-[#E4007F]" />
-              <div className="flex items-center justify-between px-7 pt-6 pb-5">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-[#E4007F]/10 flex items-center justify-center flex-shrink-0">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E4007F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                      <circle cx="12" cy="13" r="4"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-[#E4007F] uppercase tracking-widest font-mono font-semibold">YOLO AI Detection</p>
-                    <h2 className="text-lg font-semibold text-[#1d1d1f] capitalize">{modalAnomaly.className}</h2>
-                  </div>
+            {/* Solid magenta header */}
+            <div className="bg-[#E4007F] px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 bg-white/20 rounded flex items-center justify-center flex-shrink-0">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                    <circle cx="12" cy="13" r="4"/>
+                  </svg>
                 </div>
-                <button
-                  onClick={() => setModalAnomaly(null)}
-                  className="w-9 h-9 flex items-center justify-center rounded-2xl hover:bg-[#f5f5f7] text-[#6e6e73] hover:text-[#1d1d1f] transition text-xl leading-none"
-                >
-                  ×
-                </button>
+                <div>
+                  <p className="text-[10px] text-white/70 uppercase tracking-widest font-mono">YOLO AI Detection</p>
+                  <h2 className="text-base font-bold text-white capitalize leading-tight">{modalAnomaly.className}</h2>
+                </div>
               </div>
+              <button
+                onClick={() => setModalAnomaly(null)}
+                className="w-8 h-8 flex items-center justify-center rounded hover:bg-white/20 text-white transition text-xl leading-none font-light"
+              >
+                ×
+              </button>
             </div>
+
+            {/* Severity strip */}
+            {(() => {
+              const sev = modalAnomaly.severity;
+              const cfg = sev === 'high'
+                ? { bg: 'bg-red-600', label: 'HIGH SEVERITY' }
+                : sev === 'medium'
+                ? { bg: 'bg-amber-500', label: 'MEDIUM SEVERITY' }
+                : { bg: 'bg-blue-500', label: 'LOW SEVERITY' };
+              return (
+                <div className={`${cfg.bg} px-6 py-1.5 flex items-center gap-2`}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                  <span className="text-[11px] font-mono font-bold text-white tracking-widest">{cfg.label}</span>
+                </div>
+              );
+            })()}
 
             {/* Image */}
             {modalAnomaly.imageDataUrl && (
-              <div className="mx-7 mb-5 rounded-2xl overflow-hidden border border-black/6 shadow-inner bg-black">
+              <div className="mx-5 mt-5 mb-4 rounded overflow-hidden border border-black/8 bg-black">
                 <img
                   src={modalAnomaly.imageDataUrl}
                   alt="Detection frame"
-                  className="w-full max-h-[420px] object-contain"
+                  className="w-full max-h-[360px] object-contain"
                 />
               </div>
             )}
 
-            {/* Severity badge */}
-            <div className="px-7 mb-4">
-              {(() => {
-                const sev = modalAnomaly.severity;
-                const cfg = sev === 'high'
-                  ? { bg: 'bg-red-50 border-red-200', dot: 'bg-red-500', text: 'text-red-700', label: 'HIGH SEVERITY' }
-                  : sev === 'medium'
-                  ? { bg: 'bg-amber-50 border-amber-200', dot: 'bg-amber-400', text: 'text-amber-700', label: 'MEDIUM SEVERITY' }
-                  : { bg: 'bg-blue-50 border-blue-200', dot: 'bg-blue-400', text: 'text-blue-700', label: 'LOW SEVERITY' };
-                return (
-                  <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-mono font-semibold ${cfg.bg} ${cfg.text}`}>
-                    <span className={`w-2 h-2 rounded-full ${cfg.dot}`} />
-                    {cfg.label}
-                  </div>
-                );
-              })()}
-            </div>
-
             {/* Info grid */}
-            <div className="px-7 pb-7 grid grid-cols-3 gap-4">
+            <div className="px-5 pb-5 grid grid-cols-3 gap-2.5">
               <InfoRow label="Confidence"  value={`${(modalAnomaly.confidence * 100).toFixed(1)}%`} accent />
               <InfoRow label="Altitude"    value={`${modalAnomaly.altitude?.toFixed(0) ?? '--'} m`} />
               <InfoRow label="Timestamp"   value={`T+${modalAnomaly.timestamp?.toFixed(1)}s`} />
@@ -452,9 +447,13 @@ function LegendRow({ color, label, line, dashed, dot }) {
 
 function InfoRow({ label, value, accent = false }) {
   return (
-    <div className="bg-[#f5f5f7] rounded-2xl px-4 py-3">
-      <p className="text-[10px] text-[#aeaeb2] uppercase tracking-widest font-mono mb-1">{label}</p>
-      <p className={`text-sm font-mono font-semibold ${accent ? 'text-[#E4007F]' : 'text-[#1d1d1f]'}`}>{value ?? '—'}</p>
+    <div className={`flex flex-col gap-1 px-3 py-2.5 rounded border ${
+      accent
+        ? 'bg-[#E4007F]/5 border-[#E4007F]/25'
+        : 'bg-[#f5f5f7] border-black/5'
+    }`}>
+      <span className="text-[9px] uppercase tracking-widest font-mono text-black/40">{label}</span>
+      <span className={`text-sm font-mono font-semibold leading-none ${accent ? 'text-[#E4007F]' : 'text-[#1d1d1f]'}`}>{value ?? '—'}</span>
     </div>
   );
 }
@@ -479,18 +478,25 @@ function popupTower(wp, i) {
 
 function popupYoloAnomaly(a, sev) {
   const img = a.imageDataUrl
-    ? `<img src="${a.imageDataUrl}" onclick="window.__openAnomalyModal('${a.id}')" style="width:100%;border-radius:4px;margin-bottom:8px;display:block;cursor:pointer" title="Click to enlarge"/>`
+    ? `<img src="${a.imageDataUrl}" onclick="window.__openAnomalyModal('${a.id}')" style="width:100%;border-radius:2px;margin-bottom:8px;display:block;cursor:pointer;border:1px solid rgba(0,0,0,0.08)" title="Click to enlarge"/>`
     : '';
-  return `<div style="background:#fff;color:#1d1d1f;padding:12px;border-radius:4px;font-family:monospace;font-size:12px;min-width:230px;border:1px solid #fecaca;box-shadow:0 4px 16px rgba(239,68,68,0.12)">
-    ${img}
-    <b style="color:${sev};font-size:13px">⚠ YOLO: ${a.className.toUpperCase()}</b><br/>
-    <span style="color:#6e6e73;font-size:11px">Drone: ${a.droneId}</span><br/><br/>
-    <span style="color:#aeaeb2">Severity: </span><b style="color:${sev}">${(a.severity || '').toUpperCase()}</b><br/>
-    <span style="color:#aeaeb2">Confidence: </span><b>${(a.confidence * 100).toFixed(1)}%</b><br/>
-    <span style="color:#aeaeb2">Lat: </span><b>${a.lat?.toFixed(6)}</b><br/>
-    <span style="color:#aeaeb2">Lng: </span><b>${a.lng?.toFixed(6)}</b><br/>
-    <span style="color:#aeaeb2">Alt: </span><b>${a.altitude?.toFixed(0) ?? '--'} m</b><br/>
-    <span style="color:#aeaeb2">T+${a.timestamp?.toFixed(1)}s</span>
+  return `<div style="background:#fff;color:#1d1d1f;padding:0;border-radius:2px;font-family:monospace;font-size:12px;min-width:230px;border:1px solid rgba(0,0,0,0.12);box-shadow:0 8px 24px rgba(0,0,0,0.18);overflow:hidden">
+    <div style="background:#E4007F;padding:8px 12px;display:flex;align-items:center;gap:6px">
+      <b style="color:white;font-size:12px">⚠ YOLO: ${a.className.toUpperCase()}</b>
+    </div>
+    <div style="background:${sev};padding:3px 12px">
+      <span style="color:white;font-size:10px;font-weight:700;letter-spacing:0.1em">${(a.severity || '').toUpperCase()} SEVERITY</span>
+    </div>
+    <div style="padding:10px 12px">
+      ${img}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:4px">
+        <div style="background:#f5f5f7;padding:5px 8px;border-radius:2px"><span style="color:#999;font-size:9px;display:block;text-transform:uppercase;letter-spacing:0.08em">Confidence</span><b style="color:#E4007F">${(a.confidence * 100).toFixed(1)}%</b></div>
+        <div style="background:#f5f5f7;padding:5px 8px;border-radius:2px"><span style="color:#999;font-size:9px;display:block;text-transform:uppercase;letter-spacing:0.08em">Altitude</span><b>${a.altitude?.toFixed(0) ?? '--'} m</b></div>
+        <div style="background:#f5f5f7;padding:5px 8px;border-radius:2px"><span style="color:#999;font-size:9px;display:block;text-transform:uppercase;letter-spacing:0.08em">Latitude</span><b>${a.lat?.toFixed(5)}</b></div>
+        <div style="background:#f5f5f7;padding:5px 8px;border-radius:2px"><span style="color:#999;font-size:9px;display:block;text-transform:uppercase;letter-spacing:0.08em">Longitude</span><b>${a.lng?.toFixed(5)}</b></div>
+      </div>
+      <span style="color:#999;font-size:10px">Drone: ${a.droneId} · T+${a.timestamp?.toFixed(1)}s</span>
+    </div>
   </div>`;
 }
 

@@ -21,7 +21,7 @@ html, body, #root {
 /* Custom scrollbar */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #d1d1d6; border-radius: 2px; }
+::-webkit-scrollbar-thumb { background: #d1d1d6; }
 ::-webkit-scrollbar-thumb:hover { background: #E4007F; }
 
 /* Drone marker animation */
