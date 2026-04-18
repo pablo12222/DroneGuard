@@ -23,7 +23,7 @@ echo Upgrading pip...
 "%PYTHON%" -m pip install --upgrade pip --quiet
 
 echo Installing dependencies...
-"%PIP%" install fastapi "uvicorn[standard]" ultralytics Pillow python-multipart numpy opencv-python-headless
+"%PIP%" install fastapi "uvicorn[standard]" ultralytics Pillow python-multipart numpy opencv-python-headless torchvision
 if errorlevel 1 (
     echo ERROR: pip install failed.
     pause
