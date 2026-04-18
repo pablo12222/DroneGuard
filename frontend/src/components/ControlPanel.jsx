@@ -33,8 +33,8 @@ export default function ControlPanel({
 
         <div className="space-y-1.5">
           <div className="flex justify-between text-xs">
-            <span className="text-[#6e6e73]">Progress</span>
-            <span className="text-[#1d1d1f] font-mono font-medium">{progress.toFixed(1)}%</span>
+            <span className="text-black">Progress</span>
+            <span className="text-black font-mono font-medium">{progress.toFixed(1)}%</span>
           </div>
           <div className="h-1.5 bg-[#f5f5f7] rounded-full overflow-hidden border border-black/5">
             <div
@@ -119,7 +119,7 @@ export default function ControlPanel({
 
       {/* Controls */}
       <div className="p-4 space-y-2">
-        <p className="text-[10px] text-[#aeaeb2] uppercase tracking-widest font-mono mb-3">Controls</p>
+        <p className="text-[10px] text-black uppercase tracking-widest font-mono mb-3">Controls</p>
 
         <button
           onClick={onStart}

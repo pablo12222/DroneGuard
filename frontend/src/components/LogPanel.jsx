@@ -20,10 +20,10 @@ export default function LogPanel({ logs }) {
   return (
     <aside className="w-80 flex flex-col border-l border-black/6 bg-white flex-shrink-0 shadow-sm">
       {/* Header */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-black/5 flex-shrink-0 bg-white">
-        <Terminal size={13} className="text-[#aeaeb2]" />
-        <span className="text-[10px] text-[#aeaeb2] uppercase tracking-widest font-mono">System Log</span>
-        <span className="ml-auto text-[10px] text-[#c7c7cc] font-mono bg-[#f5f5f7] px-2 py-0.5 rounded-full">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-black/4 flex-shrink-0 bg-white">
+        <Terminal size={13} className="text-black" />
+        <span className="text-[10px] text-black uppercase tracking-widest font-mono">System Log</span>
+        <span className="ml-auto text-[10px] text-black font-mono bg-[#f5f5f7] px-2 py-0.5 rounded-full">
           {logs.length}
         </span>
       </div>

@@ -36,7 +36,7 @@ export default function WeatherPanel({ weather }) {
           </>
         )}
       </div>
-      <div className="flex items-center gap-1.5 text-black/40">
+      <div className="flex items-center gap-1.5 text-black">
         <CloudSun size={12} />
         <span>{weather.condition}</span>
       </div>

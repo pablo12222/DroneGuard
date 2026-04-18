@@ -167,7 +167,7 @@ export default function App() {
   }[status] || 'Standby';
 
   return (
-    <div className="flex flex-col h-screen bg-[#f5f5f7] text-[#1d1d1f] overflow-hidden">
+    <div className="flex flex-col h-screen bg-[#f5f5f7] text-black overflow-hidden">
       {/* Top bar */}
       <header className="flex items-center justify-between px-6 py-3 bg-white border-b border-black/6 shadow-sm z-50 flex-shrink-0">
         <div className="flex items-center gap-3">
@@ -176,8 +176,8 @@ export default function App() {
             <Zap size={17} className="text-white" />
           </div>
           <div>
-            <h1 className="text-sm font-semibold tracking-tight text-[#1d1d1f] leading-none">DroneGuard</h1>
-            <p className="text-[10px] text-[#6e6e73] font-mono tracking-widest mt-0.5 uppercase">Energy Infrastructure Inspection</p>
+            <h1 className="text-sm font-semibold tracking-tight text-black leading-none">DroneGuard</h1>
+            <p className="text-[10px] text-black font-mono tracking-widest mt-0.5 uppercase">Energy Infrastructure Inspection</p>
           </div>
         </div>
 
@@ -185,7 +185,7 @@ export default function App() {
           {weather && <WeatherPanel weather={weather} />}
           <div className="flex items-center gap-2">
             <span className={`w-2 h-2 rounded-full ${statusDot}`} />
-            <span className="text-xs text-[#6e6e73] font-mono uppercase tracking-widest">{statusLabel}</span>
+            <span className="text-xs text-black font-mono uppercase tracking-widest">{statusLabel}</span>
           </div>
         </div>
       </header>
