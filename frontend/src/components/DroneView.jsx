@@ -226,7 +226,7 @@ function NoVideoView({ simulationTime, droneId }) {
           <p className="text-white/30 text-xs">{droneId} · T+{simulationTime.toFixed(0)}s</p>
         </div>
         <div className="text-center space-y-1">
-          <p className="text-white/20 text-xs font-mono">Place video in E:\Hackaton\DroneGuard\videos\</p>
+          <p className="text-white/20 text-xs font-mono">Place video in project-root/videos/</p>
           <p className="text-white/20 text-xs font-mono">Enter filename in control panel</p>
         </div>
       </div>

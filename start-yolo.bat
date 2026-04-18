@@ -1,11 +1,12 @@
 @echo off
 echo Starting YOLO Inference Service...
 
-set YOLO_DIR=E:\Hackaton\DroneGuard\python-yolo
-set VENV=%YOLO_DIR%\venv
-set PYTHON=%VENV%\Scripts\python.exe
-set PIP=%VENV%\Scripts\pip.exe
-set UVICORN=%VENV%\Scripts\uvicorn.exe
+set "ROOT_DIR=%~dp0"
+set "YOLO_DIR=%ROOT_DIR%python-yolo"
+set "VENV=%YOLO_DIR%\venv"
+set "PYTHON=%VENV%\Scripts\python.exe"
+set "PIP=%VENV%\Scripts\pip.exe"
+set "UVICORN=%VENV%\Scripts\uvicorn.exe"
 
 if exist "%VENV%\Scripts\python.exe" goto :install
 

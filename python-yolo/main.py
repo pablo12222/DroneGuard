@@ -1,6 +1,6 @@
 """
 YOLO Inference Service for Drone Inspection
-Serves detections from E:/Hackaton/best.pt
+Serves detections from ../best.pt
 Run: uvicorn main:app --host 0.0.0.0 --port 8000
 """
 
@@ -13,7 +13,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-MODEL_PATH = Path(r"E:\Hackaton\DroneGuard\best.pt")
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+MODEL_PATH = PROJECT_ROOT / "best.pt"
 
 CLASS_NAMES = [
     "yoke", "yoke suspension", "spacer", "stockbridge damper",

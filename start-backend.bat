@@ -1,6 +1,7 @@
 @echo off
 echo Starting DroneGuard Backend...
-cd /d E:\Hackaton\DroneGuard\backend
+set "ROOT_DIR=%~dp0"
+cd /d "%ROOT_DIR%backend"
 if not exist node_modules (
     echo Installing dependencies...
     npm install

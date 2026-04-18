@@ -5,7 +5,7 @@ Proof of Concept for drone-based 110kV power line inspection with real-time anom
 ## Architecture
 
 ```
-E:\Hackaton\DroneGuard
+project-root/
 ├── backend/          Node.js + Express — API & SSE simulation
 ├── frontend/         React + Vite + Tailwind — Dashboard UI
 ├── python-yolo/      FastAPI — YOLO inference (optional)
@@ -19,7 +19,7 @@ E:\Hackaton\DroneGuard
 
 ### 1. Start Backend (Terminal 1)
 ```bash
-cd E:\Hackaton\DroneGuard\backend
+cd backend
 npm install
 npm run dev
 # Runs on http://localhost:3001
@@ -27,7 +27,7 @@ npm run dev
 
 ### 2. Start Frontend (Terminal 2)
 ```bash
-cd E:\Hackaton\DroneGuard\frontend
+cd frontend
 npm install
 npm run dev
 # Opens http://localhost:5173
@@ -35,7 +35,7 @@ npm run dev
 
 ### 3. (Optional) Start YOLO Service (Terminal 3)
 ```bash
-cd E:\Hackaton\DroneGuard\python-yolo
+cd python-yolo
 python -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
@@ -49,7 +49,7 @@ Or just double-click the `.bat` files.
 
 1. Open **http://localhost:5173**
 2. Select route from dropdown (Silesia 110kV is preloaded)
-3. Optionally enter a video filename in the **Video File** field (place MP4 in `E:\Hackaton\DroneGuard\videos\`)
+3. Optionally enter a video filename in the **Video File** field (place MP4 in `videos/`)
 4. Click **Start Inspection**
 5. Watch the drone move on the map in real time
 6. Switch to **Drone View** to see the camera feed + detection overlays
@@ -83,12 +83,12 @@ Or just double-click the `.bat` files.
 
 ## Adding a Video
 
-1. Copy any drone inspection video to `E:\Hackaton\DroneGuard\videos\inspection.mp4`
+1. Copy any drone inspection video to `videos/inspection.mp4`
 2. In the dashboard Control Panel, enter `inspection.mp4` in the Video File field
 3. Start the inspection — the video will sync with the simulation timeline
 
 ## Extending with Real YOLO
 
-The Python service at `python-yolo/main.py` connects to `E:\Hackaton\DroneGuard\best.pt`.
+The Python service at `python-yolo/main.py` connects to `best.pt` in the project root.
 When running, the Node backend can call `POST http://localhost:8000/detect` with a frame path.
 To enable real inference, edit `backend/services/detectionService.js` and call `runYoloInference()`.

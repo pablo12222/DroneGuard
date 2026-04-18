@@ -10,12 +10,13 @@ const detectionsApi = require('./routes/detections');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const projectRoot = path.resolve(__dirname, '..');
 
 app.use(cors({ origin: '*' }));
 app.use(express.json());
 
-// Serve video files from E:\Hackaton\DroneGuard\videos
-const videosDir = path.join('E:\\Hackaton\\DroneGuard', 'videos');
+// Serve video files from the repository root.
+const videosDir = path.join(projectRoot, 'videos');
 if (!fs.existsSync(videosDir)) fs.mkdirSync(videosDir, { recursive: true });
 app.use('/videos', express.static(videosDir));
 
