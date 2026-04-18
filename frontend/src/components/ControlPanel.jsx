@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Pause, RotateCcw, Map, Video, AlertTriangle, Activity, X, CheckCheck, Upload, FileVideo } from 'lucide-react';
+import { Pause, RotateCcw, Map, Video, AlertTriangle, Activity, X, CheckCheck, Upload, FileVideo, Play } from 'lucide-react';
 import DroneFleet from './DroneFleet';
 
 const BASE = 'http://localhost:3001';
@@ -27,7 +27,7 @@ export default function ControlPanel({
   drone, drones, activeDroneId, activeView,
   planningMode, customWaypoints,
   onSelectDrone, onAddDrone, onRemoveDrone,
-  onPause, onReset, onViewChange,
+  onPause, onReset, onRestart, onViewChange,
   onTogglePlanningMode, onAddDroneWithRoute, onClearCustomRoute,
   onSetVideoPath,
 }) {
@@ -217,16 +217,26 @@ export default function ControlPanel({
           {/* Controls */}
           <div className="p-4 space-y-2 border-b border-black/5">
             <p className="text-[10px] text-black uppercase tracking-widest font-mono mb-3">Controls</p>
-            <button onClick={onPause} disabled={!canPause}
-              className="w-full flex items-center justify-center gap-2 bg-[#f5f5f7] hover:bg-[#ebebeb] border border-black/8 disabled:opacity-30 text-black text-sm font-medium py-2.5 rounded-sm transition-all duration-150 active:scale-[0.98]">
-              <Pause size={14} />
-              {status === 'paused' ? 'Resume' : 'Pause'}
-            </button>
-            <button onClick={onReset} disabled={!canReset}
-              className="w-full flex items-center justify-center gap-2 bg-transparent hover:bg-[#f5f5f7] disabled:opacity-20 text-black text-sm font-medium py-2.5 rounded-sm transition-all duration-150 active:scale-[0.98]">
-              <RotateCcw size={13} />
-              Reset
-            </button>
+            {status === 'idle' && drone?.simulationPreset ? (
+              <button onClick={onRestart}
+                className="w-full flex items-center justify-center gap-2 bg-[#E4007F] hover:bg-[#c8006f] text-white text-sm font-semibold py-2.5 rounded-sm transition-all duration-150 active:scale-[0.98] shadow-md shadow-[#E4007F]/20">
+                <Play size={14} />
+                Start Again
+              </button>
+            ) : (
+              <>
+                <button onClick={onPause} disabled={!canPause}
+                  className="w-full flex items-center justify-center gap-2 bg-[#f5f5f7] hover:bg-[#ebebeb] border border-black/8 disabled:opacity-30 text-black text-sm font-medium py-2.5 rounded-sm transition-all duration-150 active:scale-[0.98]">
+                  <Pause size={14} />
+                  {status === 'paused' ? 'Resume' : 'Pause'}
+                </button>
+                <button onClick={onReset} disabled={!canReset}
+                  className="w-full flex items-center justify-center gap-2 bg-transparent hover:bg-[#f5f5f7] disabled:opacity-20 text-black text-sm font-medium py-2.5 rounded-sm transition-all duration-150 active:scale-[0.98]">
+                  <RotateCcw size={13} />
+                  Reset
+                </button>
+              </>
+            )}
           </div>
 
           {/* Recent detections */}
