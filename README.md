@@ -6,6 +6,14 @@ Built for TAURON as a hackathon proof-of-concept.
 
 ---
 
+<video src="demo/demo.mp4" autoplay loop muted playsinline width="100%"></video>
+
+> **GitHub users:** video tag is not rendered on GitHub — open `demo/demo.mp4` directly or use the GIF below.
+
+![DroneGuard demo](demo/demo_small.gif)
+
+---
+
 ## Architecture
 
 ```

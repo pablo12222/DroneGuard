@@ -58,6 +58,21 @@ logs/
 build/
 Release/
 
+# === MODELE ML (duże pliki binarne — wersjonować przez DVC/LFS jeśli potrzeba) ===
+*.pt
+*.pth
+*.onnx
+*.weights
+*.h5
+models/training-artifacts/
+
+# === DEMO (duży GIF — trzymamy tylko demo_small.gif i demo.mp4) ===
+demo/demo.gif
+
+# === DANE TYMCZASOWE ===
+data/detections/
+*.json.bak
+
 # === PACKAGE MANAGERS (Yarn v3 / PNPM) ===
 .pnp.*
 .yarn/*
