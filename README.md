@@ -198,8 +198,18 @@ Content-Type: application/json
 { "image_base64": "...", "timestamp": 9.2, "confidence_threshold": 0.20 }
 ```
 
+
 Response includes bounding boxes with class name, confidence, severity, and `isAnomaly` flag. Confirmed anomaly tracks (≥ 2 anomaly hits) trigger a map pin with a JPEG snapshot of the detection frame.
 
 Models are loaded from:
 - `models/detectors/` — primary detection weights
 - `models/classifiers/` — per-asset classifier weights
+
+
+## Authors
+- Paweł Krutak
+- Mateusz Matejczyk
+- Adam ochocki
+- Oliwier Gawłowski
+- Aleksader Król
+- Paweł Kustrzyk
