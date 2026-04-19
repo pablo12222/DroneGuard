@@ -1,59 +1,124 @@
-# DroneGuard 🚁
+# DroneGuard
 
-DroneGuard is a proof-of-concept system for **power line inspection** using a drone dashboard, mission simulation, and **YOLO-based video detection**.
+**Autonomous drone inspection platform for energy infrastructure** — real-time mission control, live telemetry, multi-drone fleet management, and on-device AI anomaly detection via YOLO.
 
-## ✨ What It Does
+Built for TAURON as a hackathon proof-of-concept.
 
-- shows the drone route on a live map
-- plays inspection video in Drone View
-- overlays YOLO detections directly on the video
-- counts live detections and anomalies
-- streams telemetry and mission logs in real time
+---
 
-## 🧱 Stack
+## Architecture
 
-- `frontend/` - React + Vite + Tailwind
-- `backend/` - Node.js + Express + SSE
-- `python-yolo/` - FastAPI + Ultralytics YOLO
-- `models/` - detector and classifier weights
-- `videos/` - inspection videos
-
-## 🏗️ Architecture
-
-```text
-Frontend (React)
-    |
-    | HTTP + SSE
-    v
-Backend (Express)
-    |- mission simulation
-    |- routes / detections API
-    |- video upload + /videos static hosting
-    |
-    | frame requests
-    v
-YOLO Service (FastAPI)
-    |- detector model
-    `- classifier models
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Frontend  :5173                       │
+│   React · Vite · Tailwind · Leaflet · SSE streaming     │
+└────────────────────────┬────────────────────────────────┘
+                         │  REST + Server-Sent Events
+┌────────────────────────▼────────────────────────────────┐
+│                    Backend  :3001                        │
+│   Node.js · Express · mission simulation · route data   │
+└────────────────────────┬────────────────────────────────┘
+                         │  HTTP (base64 frames)
+┌────────────────────────▼────────────────────────────────┐
+│                  YOLO Service  :8000                     │
+│   Python · FastAPI · Ultralytics · detector + classifier │
+└─────────────────────────────────────────────────────────┘
 ```
 
-### Flow
+### Mission flow
 
-1. The backend starts an inspection mission and streams telemetry.
-2. The frontend displays the route, logs, and drone state.
-3. In Drone View, video frames are sent to the YOLO service.
-4. YOLO returns detections, and the frontend renders boxes live on the video.
+1. User selects a preset route or draws a custom one on the map.
+2. Clicking **Start** POSTs to the backend — the backend starts mission simulation and opens an SSE stream.
+3. The frontend receives telemetry events (`drone_position`, `detection`, `log`, `inspection_complete`) and updates the map, fleet panel, and log in real time.
+4. In **Drone View**, video frames are captured from the canvas, encoded as JPEG/base64, and sent to the YOLO service every N frames.
+5. YOLO returns bounding boxes; confirmed anomalies are pinned on the map with a screenshot of the detection frame.
+6. On mission complete, the drone animates a return flight at simulation speed; the video plays in reverse.
 
-## ✅ Requirements
+---
 
-- `Node.js`
-- `Python 3`
-- `Git`
-- optional: `NVIDIA GPU + CUDA` for faster YOLO inference
+## File structure
 
-## 🚀 Quick Start
+```
+DroneGuard/
+│
+├── backend/                        # Node.js / Express API
+│   ├── routes/
+│   │   ├── inspection.js           # start / pause / reset mission
+│   │   ├── mission.js              # SSE stream per mission
+│   │   ├── routesApi.js            # serve route JSON files
+│   │   ├── detections.js           # detections endpoint
+│   │   └── videos.js               # video upload + static hosting
+│   ├── services/
+│   │   ├── simulationService.js    # tick-based drone position simulation
+│   │   ├── detectionService.js     # route-based synthetic anomaly generation
+│   │   └── weatherService.js       # weather data per region
+│   ├── server.js                   # Express app entry point
+│   └── package.json
+│
+├── frontend/                       # React + Vite SPA
+│   ├── public/
+│   │   └── favicon.svg
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── MapView.jsx         # Leaflet map, routes, detection pins, modal
+│   │   │   ├── DroneView.jsx       # video player, YOLO overlay, HUD
+│   │   │   ├── ControlPanel.jsx    # mission controls, fleet switcher, status
+│   │   │   ├── DroneFleet.jsx      # fleet list with anomaly badges
+│   │   │   ├── LogPanel.jsx        # real-time mission log
+│   │   │   ├── WeatherPanel.jsx    # weather chip in header
+│   │   │   └── AddDroneModal.jsx   # add-drone dialog
+│   │   ├── hooks/
+│   │   │   └── useSSE.js
+│   │   ├── utils/
+│   │   │   └── api.js              # thin fetch wrapper
+│   │   ├── App.jsx                 # root state, drone Map, SSE wiring
+│   │   ├── main.jsx
+│   │   └── index.css
+│   ├── index.html
+│   ├── vite.config.js
+│   ├── tailwind.config.js
+│   └── package.json
+│
+├── python-yolo/                    # FastAPI inference service
+│   ├── main.py                     # /detect endpoint
+│   ├── requirements.txt
+│   └── venv/
+│
+├── models/                         # YOLO weights
+│   ├── detectors/                  # primary object detection model
+│   └── classifiers/                # asset-specific classifiers
+│
+├── data/
+│   ├── routes/                     # GeoJSON-style route definitions
+│   │   ├── route_silesia.json      # Gliwice 110 kV
+│   │   ├── route_malopolska.json
+│   │   └── route_mazowsze.json
+│   └── detections/
+│       └── demo_detections.json
+│
+├── videos/                         # Inspection footage (served as static)
+│   └── trasa1.mp4
+│
+├── start-backend.bat
+├── start-frontend.bat
+└── start-yolo.bat
+```
 
-Run these from the project root:
+---
+
+## Requirements
+
+| Runtime | Version |
+|---------|---------|
+| Node.js | ≥ 18 |
+| Python  | ≥ 3.10 |
+| GPU     | optional — NVIDIA + CUDA for fast inference |
+
+---
+
+## Quick start
+
+From the project root, run each script in a separate terminal:
 
 ```bat
 start-backend.bat
@@ -61,57 +126,15 @@ start-frontend.bat
 start-yolo.bat
 ```
 
-Then open:
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost:5173 |
+| Backend API | http://localhost:3001/api/health |
+| YOLO service | http://localhost:8000/health |
 
-- Frontend: `http://localhost:5173`
-- Backend health: `http://localhost:3001/api/health`
-- YOLO health: `http://localhost:8000/health`
+---
 
-## 🎥 Video
-
-Videos are handled from the root `videos/` folder.
-
-You can:
-
-- copy a file manually into `videos/`
-- or upload it from the app
-
-Supported flow:
-
-1. place or upload a file such as `trasa1.mp4`
-2. start a mission
-3. open **Drone View**
-4. the frontend loads the file from `/videos/<filename>`
-5. if YOLO is running, live boxes are drawn over the video
-
-Default demo video:
-
-- `trasa1.mp4`
-
-Useful endpoints:
-
-- `GET /api/videos` - list available files
-- `POST /api/videos/upload` - upload a file
-- `GET /videos/<filename>` - direct video access
-
-## 🤖 YOLO
-
-The app uses models from:
-
-- `models/detectors/`
-- `models/classifiers/`
-
-YOLO is optional, but without it you will not see live AI boxes on the video.
-
-## 🛠️ Manual Setup
-
-### Frontend
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
+## Manual setup
 
 ### Backend
 
@@ -121,7 +144,15 @@ npm install
 npm run dev
 ```
 
-### YOLO
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+### YOLO service
 
 ```bash
 cd python-yolo
@@ -131,9 +162,36 @@ pip install -r requirements.txt
 uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
-## 📌 Notes
+---
 
-- videos are served from the root `videos/` folder
-- the backend runs on port `3001`
-- the frontend runs on port `5173`
-- the YOLO service runs on port `8000`
+## Key API endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/inspection/start` | Start a new mission |
+| `POST` | `/api/inspection/pause` | Pause / resume |
+| `POST` | `/api/inspection/reset` | Abort and reset |
+| `GET`  | `/api/mission/:id/stream` | SSE telemetry stream |
+| `GET`  | `/api/routes/:id` | Fetch route waypoints |
+| `GET`  | `/api/videos` | List available videos |
+| `POST` | `/api/videos/upload` | Upload inspection video |
+| `GET`  | `/videos/:filename` | Serve video file |
+
+---
+
+## YOLO inference
+
+The frontend captures video frames on a configurable stride and posts them to the YOLO service:
+
+```
+POST http://localhost:8000/detect
+Content-Type: application/json
+
+{ "image_base64": "...", "timestamp": 9.2, "confidence_threshold": 0.20 }
+```
+
+Response includes bounding boxes with class name, confidence, severity, and `isAnomaly` flag. Confirmed anomaly tracks (≥ 2 anomaly hits) trigger a map pin with a JPEG snapshot of the detection frame.
+
+Models are loaded from:
+- `models/detectors/` — primary detection weights
+- `models/classifiers/` — per-asset classifier weights
